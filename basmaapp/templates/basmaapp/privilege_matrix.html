@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWAP-ATTENDANCE</title>
+  <style>
+    :root {
+      --bg: #eef2f6;
+      --panel: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --brand: {{ admin_theme_color|default:"#0284c7" }};
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: linear-gradient(120deg, #eef2f6, #e0f2fe 50%, #f1f5f9);
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 32px; }
+    .top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .title-wrap { display: flex; align-items: flex-start; gap: 10px; }
+    .entity-logo { width: 52px; height: 52px; object-fit: contain; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+    h1 { margin: 0; font-size: 1.7rem; }
+    .sub { margin: 6px 0 0; color: var(--muted); font-size: 0.95rem; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .menu-dd { position: relative; }
+    .menu-dd > summary { list-style: none; }
+    .menu-dd > summary::-webkit-details-marker { display: none; }
+    .menu-list { display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:170px; background:#fff; border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 20px rgba(15,23,42,.12); padding:6px; z-index:25; flex-direction:column; gap:6px; }
+    .menu-dd[open] .menu-list { display:flex; }
+    .menu-list .btn { width:100%; justify-content:flex-start; }
+    .side-menu-panel .menu-list {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: min(280px, 80vw);
+      height: 100vh;
+      max-height: 100vh;
+      padding: 56px 12px 12px;
+      border-radius: 0;
+      border-right: 1px solid var(--border);
+      border-left: 0;
+      border-top: 0;
+      box-shadow: 16px 0 32px rgba(15, 23, 42, 0.18);
+      background: #ffffff;
+      overflow-y: auto;
+      z-index: 30;
+    }
+    .wrap { padding-left: 300px; max-width: none; width: 100%; margin: 0; }
+    .btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); background: #fff; color: var(--text); font-weight: 600; font-size: 0.82rem; cursor: pointer; }
+    .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 0.82rem; font-weight: 600; }
+    input, select { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.82rem; background: #fff; width: 100%; }
+    .filters { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto; gap: 10px; align-items: end; }
+    .table-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 700px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 0.82rem; }
+    th { background: #f8fafc; color: #334155; }
+    .footer { margin-top: 12px; text-align: center; color: var(--muted); font-size: 0.84rem; }
+  </style>
+  
+  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1>{% tr "Privileges Matrix" %}</h1>
+          <p class="sub">{% tr "Manage user privileges in one matrix by model." %}</p>
+          <p class="sub">{% tr "Entity" %}: {{ admin_entity_display_name|default:entity.name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% elif entity.code %} ({{ entity.code }}){% endif %} | {% tr "User" %}: {{ footer_user_name }}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="history.length > 1 ? history.back() : window.location='/admin-home/';" type="button">{% tr "Back" %}</button>
+        <details class="menu-dd">
+          <summary class="btn">{% tr "Language" %}</summary>
+          <div class="menu-list">
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=ar&next={{ request.get_full_path|urlencode }}">🇰🇼 Arabic</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=en&next={{ request.get_full_path|urlencode }}">🇺🇸 English</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=es&next={{ request.get_full_path|urlencode }}">🇪🇸 Espanol</a>
+          </div>
+        </details>
+        <nav class="side-menu-panel">
+          <div class="menu-list">
+            <a class="btn" href="{% url 'admin_home' %}">{% tr "Home" %}</a>
+            <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <form method="get" class="panel">
+      <div class="filters">
+        <div>
+          <label for="user_search">{% tr "Search User" %}</label>
+          <input id="user_search" type="text" placeholder="{% tr 'Search options...' %}">
+        </div>
+        <div>
+          <label for="user">{% tr "Select User" %}</label>
+          <select id="user" name="user" required>
+            <option value="">-- {% tr "Select User" %} --</option>
+            {% for u in users %}
+              <option value="{{ u.id }}" {% if selected_user and selected_user.id == u.id %}selected{% endif %}>{{ u.get_full_name|default:u.username }} ({{ u.username }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn primary" type="submit">{% tr "Apply" %}</button>
+      </div>
+    </form>
+
+	    {% if selected_user %}
+	      <form method="post" class="panel">
+	        {% csrf_token %}
+	        <input type="hidden" name="target_user" value="{{ selected_user.id }}">
+          <input type="hidden" name="delete_confirm_text" id="deleteConfirmText" value="">
+          {% if delete_confirm_required %}
+            <div style="margin-bottom:10px; color:#92400e; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px;">
+              {% tr "Delete confirmation required. Type" %} <strong>confirm</strong> {% tr "to proceed with delete." %}
+            </div>
+          {% endif %}
+          {% if not can_edit_privileges %}
+            <div style="margin-bottom:10px; color:#92400e; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px;">
+              {% tr "Read only access. Only FULL_ADMIN can update privileges." %}
+            </div>
+          {% endif %}
+	        <div class="table-wrap">
+	          <table>
+            <thead>
+              <tr>
+                <th>{% tr "Model" %}</th>
+                <th>{% tr "Access Level" %}</th>
+                <th>{% tr "Enabled" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+	              {% for row in matrix_rows %}
+	                <tr data-priv-row="1" data-row-key="{{ row.row_key }}" data-has-existing="{% if row.has_existing %}1{% else %}0{% endif %}" data-row-editable="{% if row.row_editable %}1{% else %}0{% endif %}">
+	                  <td>{% tr row.display_name %}</td>
+	                  <td>
+	                    <select name="access_{{ row.row_key }}" {% if not row.row_editable %}disabled{% endif %}>
+                        {% for level in row.allowed_levels %}
+                          <option value="{{ level }}" {% if row.access_level == level %}selected{% endif %}>{% tr level %}</option>
+                        {% endfor %}
+	                    </select>
+	                  </td>
+	                  <td><input type="checkbox" name="active_{{ row.row_key }}" {% if row.is_active %}checked{% endif %} {% if not row.row_editable %}disabled{% endif %}></td>
+	                </tr>
+	              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;">
+	          <button class="btn primary" type="submit" {% if not can_edit_privileges %}disabled{% endif %}>{% tr "Save Matrix" %}</button>
+	        </div>
+	      </form>
+    {% else %}
+      <div class="panel">{% tr "Select a user to view and edit privileges." %}</div>
+    {% endif %}
+
+    <div class="footer">
+      <span style="font-size:0.78rem; color:#64748b; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="34" height="16" viewBox="0 0 68 32" aria-hidden="true" focusable="false">
+          <text x="2" y="18" font-size="15" font-weight="700" font-family="Arial, sans-serif" fill="#111827">aws</text>
+          <path d="M10 23 C24 31, 46 31, 58 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        {% tr "Powered by AWS" %} | {% tr "Owned by SWAP KUWAIT" %}
+      </span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const searchInput = document.getElementById('user_search');
+      const select = document.getElementById('user');
+      if (!searchInput || !select) return;
+      searchInput.addEventListener('input', function () {
+        const q = searchInput.value.trim().toLowerCase();
+        const options = select.querySelectorAll('option');
+        options.forEach(function (opt, idx) {
+          if (idx === 0) {
+            opt.hidden = false;
+            return;
+          }
+          const text = (opt.textContent || '').toLowerCase();
+          opt.hidden = q && text.indexOf(q) === -1;
+        });
+      });
+    })();
+  </script>
+  <script>
+    (function () {
+      var matrixForm = document.querySelector("form.panel input[name='target_user']");
+      if (!matrixForm) return;
+      var form = matrixForm.closest("form");
+      if (!form) return;
+      form.addEventListener("submit", function (event) {
+        var rows = form.querySelectorAll("tr[data-priv-row='1']");
+        var deleteRequested = false;
+        rows.forEach(function (row) {
+          if (deleteRequested) return;
+          if (row.getAttribute("data-row-editable") !== "1") return;
+          if (row.getAttribute("data-has-existing") !== "1") return;
+          var key = row.getAttribute("data-row-key");
+          if (!key) return;
+          var level = form.querySelector("select[name='access_" + key + "']");
+          var active = form.querySelector("input[name='active_" + key + "']");
+          var levelValue = String((level && level.value) || "NO_ACCESS").trim().toUpperCase();
+          var isActive = !!(active && active.checked);
+          if (levelValue === "NO_ACCESS" || !isActive) {
+            deleteRequested = true;
+          }
+        });
+        if (!deleteRequested) {
+          var hiddenNoDelete = form.querySelector("#deleteConfirmText");
+          if (hiddenNoDelete) hiddenNoDelete.value = "";
+          return;
+        }
+        var typed = window.prompt("{% tr 'Type confirm to delete selected privilege rows' %}", "");
+        if (String(typed || "").trim().toLowerCase() !== "confirm") {
+          event.preventDefault();
+          alert("{% tr 'Delete cancelled. You must type confirm.' %}");
+          return;
+        }
+        var hidden = form.querySelector("#deleteConfirmText");
+        if (hidden) hidden.value = "confirm";
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var menus = Array.prototype.slice.call(document.querySelectorAll('details.menu-dd'));
+      if (!menus.length) return;
+
+      document.addEventListener('click', function (event) {
+        menus.forEach(function (menu) {
+          if (!menu.contains(event.target)) {
+            menu.removeAttribute('open');
+          }
+        });
+      });
+
+      menus.forEach(function (menu) {
+        menu.addEventListener('toggle', function () {
+          if (!menu.open) return;
+          menus.forEach(function (other) {
+            if (other !== menu) other.removeAttribute('open');
+          });
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        menus.forEach(function (menu) { menu.removeAttribute('open'); });
+      });
+    })();
+  </script>
+</body>
+</html>

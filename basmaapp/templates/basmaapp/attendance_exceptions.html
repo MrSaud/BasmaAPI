@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWAP-ATTENDANCE</title>
+  <style>
+    :root {
+      --bg: #eef2f6;
+      --panel: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --brand: {{ admin_theme_color|default:"#0284c7" }};
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); background: linear-gradient(120deg, #eef2f6, #e0f2fe 50%, #f1f5f9); }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 32px; }
+    .top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 14px; }
+    .title-wrap { display: flex; gap: 10px; }
+    .entity-logo { width: 52px; height: 52px; object-fit: contain; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+    h1 { margin: 0; font-size: 1.7rem; }
+    .sub { margin: 6px 0 0; color: var(--muted); font-size: 0.95rem; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .menu-dd { position: relative; }
+    .menu-dd > summary { list-style: none; }
+    .menu-dd > summary::-webkit-details-marker { display: none; }
+    .menu-list { display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:170px; background:#fff; border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 20px rgba(15,23,42,.12); padding:6px; z-index:25; flex-direction:column; gap:6px; }
+    .menu-dd[open] .menu-list { display:flex; }
+    .menu-list .btn { width:100%; justify-content:flex-start; }
+    .side-menu-panel .menu-list {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: min(280px, 80vw);
+      height: 100vh;
+      max-height: 100vh;
+      padding: 56px 12px 12px;
+      border-radius: 0;
+      border-right: 1px solid var(--border);
+      border-left: 0;
+      border-top: 0;
+      box-shadow: 16px 0 32px rgba(15, 23, 42, 0.18);
+      background: #ffffff;
+      overflow-y: auto;
+      z-index: 30;
+    }
+    .wrap { padding-left: 300px; max-width: none; width: 100%; margin: 0; }
+    .btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); background: #fff; color: var(--text); font-weight: 600; font-size: 0.82rem; cursor: pointer; }
+    .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    form.panel {
+      position: sticky;
+      top: 8px;
+      z-index: 3;
+    }
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; align-items: end; }
+    label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 0.82rem; font-weight: 600; }
+    input { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.82rem; width: 100%; }
+    .section-title { margin: 0 0 8px; font-size: 1.05rem; }
+    .table-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 0.82rem; vertical-align: top; }
+    th { background: #f8fafc; color: #334155; }
+    .empty { color: var(--muted); font-size: 0.92rem; }
+    .footer { margin-top: 12px; text-align: center; color: var(--muted); font-size: 0.84rem; }
+  </style>
+  
+  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1>{% tr "Attendance Exceptions" %}</h1>
+          <p class="sub">{% tr "Review attendance anomalies to follow up quickly." %}</p>
+          <p class="sub">{% tr "Entity" %}: {{ admin_entity_display_name|default:entity.name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% elif entity.code %} ({{ entity.code }}){% endif %} | {% tr "User" %}: {{ footer_user_name }}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="history.length > 1 ? history.back() : window.location='/admin-home/';" type="button">{% tr "Back" %}</button>
+        <details class="menu-dd">
+          <summary class="btn">{% tr "Language" %}</summary>
+          <div class="menu-list">
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=ar&next={{ request.get_full_path|urlencode }}">🇰🇼 Arabic</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=en&next={{ request.get_full_path|urlencode }}">🇺🇸 English</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=es&next={{ request.get_full_path|urlencode }}">🇪🇸 Espanol</a>
+          </div>
+        </details>
+        <nav class="side-menu-panel">
+          <div class="menu-list">
+            <a class="btn" href="{% url 'admin_home' %}">{% tr "Home" %}</a>
+            <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <form method="get" class="panel">
+      <div class="filters">
+        <div>
+          <label for="start_date">{% tr "From Date" %}</label>
+          <input id="start_date" name="start_date" type="date" value="{{ exceptions.filter_values.start_date }}">
+        </div>
+        <div>
+          <label for="end_date">{% tr "To Date" %}</label>
+          <input id="end_date" name="end_date" type="date" value="{{ exceptions.filter_values.end_date }}">
+        </div>
+        <div>
+          <label for="failure_threshold">{% tr "Failure Threshold" %}</label>
+          <input id="failure_threshold" name="failure_threshold" type="number" min="1" value="{{ exceptions.filter_values.failure_threshold }}">
+        </div>
+        <div>
+          <label for="late_after_hour">{% tr "Late After Hour" %}</label>
+          <input id="late_after_hour" name="late_after_hour" type="number" min="0" max="23" value="{{ exceptions.filter_values.late_after_hour }}">
+        </div>
+        <div>
+          <label for="employee_name">{% tr "Search Name" %}</label>
+          <input id="employee_name" name="employee_name" type="text" value="{{ exceptions.filter_values.employee_name }}">
+        </div>
+        <div>
+          <label for="employee_no">{% tr "Search Employee Number" %}</label>
+          <input id="employee_no" name="employee_no" type="text" value="{{ exceptions.filter_values.employee_no }}">
+        </div>
+        <div>
+          <label for="civil_id">{% tr "Search Civil ID" %}</label>
+          <input id="civil_id" name="civil_id" type="text" value="{{ exceptions.filter_values.civil_id }}">
+        </div>
+      </div>
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn primary" type="submit">{% tr "Apply Filter" %}</button>
+        <a class="btn" href="{% url 'attendance_exceptions' %}">{% tr "Clear" %}</a>
+        <button class="btn" type="submit" name="preset_action" value="save">{% tr "Save Filters" %}</button>
+        {% if saved_filters_available %}
+          <a class="btn" href="{% url 'attendance_exceptions' %}?preset_action=load">{% tr "Load Saved Filters" %}</a>
+        {% endif %}
+        <a class="btn" href="{% url 'attendance_exceptions' %}?preset_action=clear">{% tr "Clear Saved Filters" %}</a>
+      </div>
+    </form>
+
+    <section class="panel">
+      <h2 class="section-title">{% tr "Missing SIGN_OUT By Day" %}</h2>
+      {% if exceptions.missing_sign_out %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{% tr "Employee Name" %}</th>
+                <th>{% tr "Date" %}</th>
+                <th>{% tr "SIGN_IN Count" %}</th>
+                <th>{% tr "SIGN_OUT Count" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in exceptions.missing_sign_out %}
+                <tr>
+                  <td>{{ item.employee__full_name|default:"-" }}</td>
+                  <td>{{ item.txn_date|date:"Y-m-d" }}</td>
+                  <td>{{ item.sign_in_count }}</td>
+                  <td>{{ item.sign_out_count }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">{% tr "No exception records found for current filters." %}</div>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">{% tr "Late SIGN_IN Groups" %}</h2>
+      {% if exceptions.late_sign_ins %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{% tr "Employee Name" %}</th>
+                <th>{% tr "Employee No" %}</th>
+                <th>{% tr "Date" %}</th>
+                <th>{% tr "SIGN_IN Count" %}</th>
+                <th>{% tr "Last SIGN_IN" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in exceptions.late_sign_ins %}
+                <tr>
+                  <td>{{ item.employee__full_name|default:"-" }}</td>
+                  <td>{{ item.employee__employee_no|default:"-" }}</td>
+                  <td>{{ item.txn_date|date:"Y-m-d" }}</td>
+                  <td>{{ item.count }}</td>
+                  <td>{{ item.last_at|date:"Y-m-d H:i:s" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">{% tr "No exception records found for current filters." %}</div>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">{% tr "Outside Assigned Locations" %}</h2>
+      {% if exceptions.outside_assigned_location %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{% tr "Transaction ID" %}</th>
+                <th>{% tr "Occurred At" %}</th>
+                <th>{% tr "Employee Name" %}</th>
+                <th>{% tr "Employee No" %}</th>
+                <th>{% tr "Action" %}</th>
+                <th>{% tr "Location" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in exceptions.outside_assigned_location %}
+                <tr>
+                  <td>{{ item.id }}</td>
+                  <td>{{ item.occurred_at|date:"Y-m-d H:i:s" }}</td>
+                  <td>{{ item.employee__full_name|default:"-" }}</td>
+                  <td>{{ item.employee__employee_no|default:"-" }}</td>
+                  <td>{{ item.action|default:"-" }}</td>
+                  <td>{{ item.location__name|default:"-" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">{% tr "No exception records found for current filters." %}</div>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">{% tr "Repeated Biometric Failures" %}</h2>
+      {% if exceptions.repeated_biometric_failures %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{% tr "Employee Name" %}</th>
+                <th>{% tr "Employee No" %}</th>
+                <th>{% tr "Failed Count" %}</th>
+                <th>{% tr "Last Failed At" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in exceptions.repeated_biometric_failures %}
+                <tr>
+                  <td>{{ item.employee__full_name|default:"-" }}</td>
+                  <td>{{ item.employee__employee_no|default:"-" }}</td>
+                  <td>{{ item.failed_count }}</td>
+                  <td>{{ item.last_failed_at|date:"Y-m-d H:i:s" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">{% tr "No exception records found for current filters." %}</div>
+      {% endif %}
+    </section>
+
+    <div class="footer">
+      <span style="font-size:0.78rem; color:#64748b; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="34" height="16" viewBox="0 0 68 32" aria-hidden="true" focusable="false">
+          <text x="2" y="18" font-size="15" font-weight="700" font-family="Arial, sans-serif" fill="#111827">aws</text>
+          <path d="M10 23 C24 31, 46 31, 58 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        {% tr "Powered by AWS" %} | {% tr "Owned by SWAP KUWAIT" %}
+      </span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var menus = Array.prototype.slice.call(document.querySelectorAll('details.menu-dd'));
+      if (!menus.length) return;
+
+      document.addEventListener('click', function (event) {
+        menus.forEach(function (menu) {
+          if (!menu.contains(event.target)) {
+            menu.removeAttribute('open');
+          }
+        });
+      });
+
+      menus.forEach(function (menu) {
+        menu.addEventListener('toggle', function () {
+          if (!menu.open) return;
+          menus.forEach(function (other) {
+            if (other !== menu) other.removeAttribute('open');
+          });
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        menus.forEach(function (menu) { menu.removeAttribute('open'); });
+      });
+    })();
+  </script>
+</body>
+</html>

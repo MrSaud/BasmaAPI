@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWAP-ATTENDANCE</title>
+  <style>
+    :root {
+      --bg: #eef2f6;
+      --panel: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --brand: {{ admin_theme_color|default:"#0284c7" }};
+      --brand-dark: {{ admin_theme_color_secondary|default:admin_theme_color_dark|default:"#0369a1" }};
+      --font-base: {% if admin_font_family %}{{ admin_font_family }}{% else %}-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif{% endif %};
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-base);
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 20px 16px 30px; }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .title-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .entity-logo {
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      flex-shrink: 0;
+    }
+    h1 { margin: 0; font-size: 1.4rem; }
+    .sub { margin: 5px 0 0; color: var(--muted); }
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 2px 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .menu-dd { position: relative; }
+    .menu-dd > summary { list-style: none; }
+    .menu-dd > summary::-webkit-details-marker { display: none; }
+    .menu-list { display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:180px; background:#fff; border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 20px rgba(15,23,42,.12); padding:6px; z-index:25; flex-direction:column; gap:6px; }
+    .menu-dd[open] .menu-list { display:flex; }
+    .menu-list .btn { width:100%; justify-content:flex-start; }
+    .side-menu-panel .menu-list {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: min(280px, 80vw);
+      height: 100vh;
+      max-height: 100vh;
+      padding: 56px 12px 12px;
+      border-radius: 0;
+      border-right: 1px solid var(--border);
+      border-left: 0;
+      border-top: 0;
+      box-shadow: 16px 0 32px rgba(15, 23, 42, 0.18);
+      background: #ffffff;
+      overflow-y: auto;
+      z-index: 30;
+    }
+    .wrap { padding-left: 300px; max-width: none; width: 100%; margin: 0; }
+    .table-wrap {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 12px;
+      overflow: auto;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td {
+      border-bottom: 1px solid #edf2f7;
+      text-align: left;
+      vertical-align: top;
+      padding: 10px 12px;
+      font-size: 0.82rem;
+    }
+    th { background: #f8fafc; color: #334155; position: sticky; top: 0; }
+    .empty {
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      background: var(--panel);
+      padding: 16px;
+    }
+    .notice {
+      margin-bottom: 10px;
+      border: 1px solid #fdba74;
+      background: #fff7ed;
+      color: #9a3412;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+    }
+    .license-warning-chip {
+      color: #9a3412;
+      font-weight: 700;
+    }
+    .actions-cell { white-space: nowrap; }
+    .token-expired-row td {
+      background: #fff1f2;
+    }
+    .btn.disabled,
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .filters-shell {
+      position: sticky;
+      top: 8px;
+      z-index: 3;
+      margin-bottom: 12px;
+    }
+    .filters {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    }
+    .filters-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .filters-title {
+      margin: 0;
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: #0f172a;
+    }
+    .filters-body {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .filter-field label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .filter-field input,
+    .filter-field select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 9px;
+      font-size: 0.82rem;
+      background: #fff;
+      color: var(--text);
+    }
+    .filter-field input:focus,
+    .filter-field select:focus {
+      outline: none;
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.16);
+    }
+    .image-preview {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #fff;
+      display: block;
+    }
+    .image-hover-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .image-hover-large {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: calc(100% + 10px);
+      width: 300px;
+      height: 300px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.22);
+      z-index: 20;
+      pointer-events: none;
+    }
+    .image-hover-wrap:hover .image-hover-large,
+    .image-hover-wrap:focus-within .image-hover-large {
+      display: block;
+    }
+    .color-chip {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    .footer {
+      margin-top: 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+    .pagination {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .pagination .btn {
+      padding: 2px 8px;
+      font-size: 0.82rem;
+    }
+    .inline-form {
+      display: inline;
+      margin-left: 4px;
+    }
+    .qr-fullscreen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(2,132,199,0.28), transparent 42%),
+        radial-gradient(circle at 80% 80%, rgba(14,116,144,0.24), transparent 44%),
+        rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(10px);
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .qr-card {
+      width: min(820px, 96vw);
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: linear-gradient(165deg, rgba(255,255,255,0.98), rgba(240,249,255,0.95));
+      box-shadow: 0 18px 40px rgba(2, 6, 23, 0.3);
+      padding: 18px;
+    }
+    .qr-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .qr-title {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #0f172a;
+    }
+    .qr-sub {
+      margin: 2px 0 0;
+      color: #475569;
+      font-size: 0.86rem;
+    }
+    .qr-close {
+      border-radius: 10px;
+      padding: 6px 10px;
+    }
+    .qr-body {
+      display: grid;
+      grid-template-columns: minmax(220px, 330px) 1fr;
+      gap: 14px;
+      align-items: center;
+    }
+    .qr-image-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
+      background: #fff;
+      padding: 10px;
+    }
+    .qr-image-box img {
+      width: min(320px, 100%);
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+    .qr-meta {
+      display: grid;
+      gap: 8px;
+    }
+    .qr-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #bae6fd;
+      background: #ecfeff;
+      color: #0f172a;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      width: fit-content;
+    }
+    .qr-label {
+      color: #475569;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 2px;
+    }
+    .qr-value {
+      color: #0f172a;
+      font-size: 0.9rem;
+      font-weight: 600;
+      word-break: break-word;
+    }
+    @media (max-width: 760px) {
+      .qr-body { grid-template-columns: 1fr; }
+      .qr-card { padding: 14px; }
+    }
+    .col-toggles {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      font-size: 0.82rem;
+    }
+    .col-toggles-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      width: 100%;
+    }
+    .col-toggles label {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      color: #334155;
+    }
+  </style>
+  
+  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1>{{ model_title }}</h1>
+          <p class="sub">{% tr "Insert and edit records." %}</p>
+          <p class="sub">{% tr "Entity" %}: {{ admin_entity_display_name|default:footer_entity_name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% endif %} | {% tr "User" %}: {{ footer_user_name }}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="history.length > 1 ? history.back() : window.location='/admin-home/';" type="button">{% tr "Back" %}</button>
+        {% if can_add %}
+          <a class="btn primary" href="{% url 'model_create' model_name %}">{% tr "Add New" %}</a>
+        {% endif %}
+        <details class="menu-dd">
+          <summary class="btn">{% tr "Language" %}</summary>
+          <div class="menu-list">
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=ar&next={{ request.get_full_path|urlencode }}">🇰🇼 Arabic</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=en&next={{ request.get_full_path|urlencode }}">🇺🇸 English</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=es&next={{ request.get_full_path|urlencode }}">🇪🇸 Espanol</a>
+          </div>
+        </details>
+        <nav class="side-menu-panel">
+          <div class="menu-list">
+            <a class="btn" href="/admin-home/">{% tr "Home" %}</a>
+            <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    {% if allow_filters %}
+    <div class="filters-shell">
+      <div class="filters">
+        <form id="recordsFilterForm" method="get">
+          <div class="filters-head">
+            <h3 class="filters-title">{% tr "Filter Records" %}</h3>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <a id="clearFiltersBtn" class="btn" href="{{ request.path }}">{% tr "Clear Filters" %}</a>
+              <button type="submit" class="btn primary">{% tr "Apply Filters" %}</button>
+            </div>
+          </div>
+          <div class="filters-body">
+            {% if has_name_filter %}
+              <div class="filter-field">
+                <label for="nameFilter">{% tr "Search Name" %}</label>
+                <input id="nameFilter" name="name" value="{{ filter_values.name }}" type="text" placeholder="{% tr 'Type name' %}">
+              </div>
+            {% endif %}
+            {% if has_id_filter %}
+              <div class="filter-field">
+                <label for="idFilter">{% tr "Search ID" %}</label>
+                <input id="idFilter" name="id" value="{{ filter_values.id }}" type="text" placeholder="{% tr 'Type id' %}">
+              </div>
+            {% endif %}
+            {% if has_date_filter %}
+              <div class="filter-field">
+                <label for="dateFromFilter">{% tr "From Date" %}</label>
+                <input id="dateFromFilter" name="date_from" value="{{ filter_values.date_from }}" type="date">
+              </div>
+              <div class="filter-field">
+                <label for="dateToFilter">{% tr "To Date" %}</label>
+                <input id="dateToFilter" name="date_to" value="{{ filter_values.date_to }}" type="date">
+              </div>
+            {% endif %}
+            {% if has_civil_id_filter %}
+              <div class="filter-field">
+                <label for="civilIdFilter">{% tr "Search Civil ID" %}</label>
+                <input id="civilIdFilter" name="civil_id" value="{{ filter_values.civil_id }}" type="text" placeholder="{% tr 'Type civil id' %}">
+              </div>
+            {% endif %}
+            {% if has_employee_no_filter %}
+              <div class="filter-field">
+                <label for="employeeNoFilter">{% tr "Search Employee Number" %}</label>
+                <input id="employeeNoFilter" name="employee_no" value="{{ filter_values.employee_no }}" type="text" placeholder="{% tr 'Type employee number' %}">
+              </div>
+            {% endif %}
+            {% if has_employee_filter %}
+              <div class="filter-field">
+                <label for="employeeFilter">{% tr "Search Employee" %}</label>
+                <input id="employeeFilter" name="employee" value="{{ filter_values.employee }}" type="text" placeholder="{% tr 'Type employee' %}">
+              </div>
+            {% endif %}
+            {% if has_location_filter %}
+              <div class="filter-field">
+                <label for="locationFilter">{% tr "Search Location" %}</label>
+                <input id="locationFilter" name="location" value="{{ filter_values.location }}" type="text" placeholder="{% tr 'Type location' %}">
+              </div>
+            {% endif %}
+            {% if has_user_filter %}
+              <div class="filter-field">
+                <label for="userFilter">{% tr "Search User" %}</label>
+                <input id="userFilter" name="user" value="{{ filter_values.user }}" type="text" placeholder="{% tr 'Type user' %}">
+              </div>
+            {% endif %}
+            {% if has_description_filter %}
+              <div class="filter-field">
+                <label for="descriptionFilter">{% tr "Search Description" %}</label>
+                <input id="descriptionFilter" name="description" value="{{ filter_values.description }}" type="text" placeholder="{% tr 'Type description' %}">
+              </div>
+            {% endif %}
+            <div class="filter-field">
+              <label for="columnFilterSelect">{% tr "Field" %}</label>
+              <select id="columnFilterSelect" name="column">
+                <option value="">{% tr "All" %}</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="columnValueFilter">{% tr "Apply Filter" %}</label>
+              <input id="columnValueFilter" name="column_value" value="{{ filter_values.column_value }}" type="text" placeholder="{% tr 'Type field value' %}">
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    <div class="col-toggles" id="colToggles"></div>
+    {% if employee_capacity and employee_capacity.max %}
+      <div class="notice">
+        Employee capacity: {{ employee_capacity.current }} / {{ employee_capacity.max }}.
+        {% if employee_capacity.at_limit %}Limit reached. Adding new employees is disabled.{% endif %}
+      </div>
+    {% endif %}
+    {% if delete_confirm_required %}
+      <div class="notice">
+        {% tr "Delete confirmation required. Type" %} <strong>confirm</strong> {% tr "to proceed with delete." %}
+      </div>
+    {% endif %}
+
+    {% if record_rows %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-field="id">ID</th>
+              {% for field in fields %}
+                {% if field.name != 'id' %}
+                  <th data-field="{{ field.name|lower }}">{{ field.verbose_name|title }}</th>
+                {% endif %}
+              {% endfor %}
+              {% if model_name == "entitysettings" %}
+                <th data-field="license_expire_date">{% tr "License Expire Date" %}</th>
+              {% endif %}
+              {% if model_name == "entity" %}
+                <th data-field="logo">Logo</th>
+              {% endif %}
+              <th data-field="actions">{% tr "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in record_rows %}
+              <tr class="data-row{% if model_name == 'managerqrcodetoken' and row.manager_qr_is_expired %} token-expired-row{% endif %}" data-search-name="{{ row.search_name }}" data-search-id="{{ row.search_id }}" data-search-date="{{ row.search_date }}" data-search-civil-id="{{ row.search_civil_id }}" data-search-employee-no="{{ row.search_employee_no }}" data-search-employee="{{ row.search_employee }}" data-search-location="{{ row.search_location }}" data-search-user="{{ row.search_user }}" data-search-description="{{ row.search_description }}">
+                <td>{{ row.pk }}</td>
+                {% for value in row.values %}
+                  <td>
+                    {% if value.is_image %}
+                      <span class="image-hover-wrap">
+                        <img src="{{ value.image_src }}" alt="Base64 image" class="image-preview">
+                        <img src="{{ value.image_src }}" alt="Large preview" class="image-hover-large">
+                      </span>
+                      <div class="image-meta" data-size="{{ value.size_text }}" style="margin-top:4px; color:#64748b; font-size:0.75rem;">
+                        {{ value.size_text }}
+                        {% if value.liveness_score %}
+                          <div>{% tr "Liveness" %}: {{ value.liveness_score }}</div>
+                        {% endif %}
+                      </div>
+                    {% elif value.is_color %}
+                      <span class="color-chip" style="background: {{ value.color_hex }};"></span>
+                      <span>{{ value.color_hex }}</span>
+                    {% elif value.is_boolean %}
+                      {% if value.boolean_value %}
+                        <span class="bool-indicator true" title="{% tr 'True' %}">&#10003;</span>
+                      {% else %}
+                        <span class="bool-indicator false" title="{% tr 'False' %}">&#10005;</span>
+                      {% endif %}
+                    {% elif model_name == "entity" and value.field_name == "license_expire_date" and row.license_expire_soon %}
+                      <span class="license-warning-chip">{{ value.text }}</span>
+                    {% else %}
+                      {{ value.text }}
+                    {% endif %}
+                  </td>
+                {% endfor %}
+                {% if model_name == "entitysettings" %}
+                  <td>{{ row.entity_license_expire_date }}</td>
+                {% endif %}
+                {% if model_name == "entity" %}
+                  <td>
+                    {% if row.entity_logo and row.entity_logo.is_image %}
+                      <span class="image-hover-wrap">
+                        <img src="{{ row.entity_logo.image_src }}" alt="Entity logo" class="image-preview">
+                        <img src="{{ row.entity_logo.image_src }}" alt="Large preview" class="image-hover-large">
+                      </span>
+                      <div class="image-meta" data-size="{{ row.entity_logo.size_text }}" style="margin-top:4px; color:#64748b; font-size:0.75rem;">
+                        {{ row.entity_logo.size_text }}
+                      </div>
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                {% endif %}
+                <td class="actions-cell">
+                  {% if model_name == "managerqrcodetoken" %}
+                    {% if row.manager_qr_payload or row.manager_qr_live_enabled %}
+                      <button type="button" class="btn view-qr-btn{% if row.manager_qr_is_expired %} disabled{% endif %}" data-qr-id="{{ row.pk }}" data-qr-live-enabled="{% if row.manager_qr_live_enabled %}1{% else %}0{% endif %}" data-qr-live-interval="{{ row.manager_qr_live_interval_sec }}" data-qr-payload="{{ row.manager_qr_payload|escapejs }}" data-qr-location="{{ row.manager_qr_location|escape }}" data-qr-action="{{ row.manager_qr_action|escape }}" data-qr-expires-at="{{ row.manager_qr_expires_at|escape }}" data-qr-manager-name="{{ row.manager_qr_manager_name|escape }}" data-qr-manager-title="{{ row.manager_qr_manager_title|escape }}" {% if row.manager_qr_is_expired %}disabled title="{% tr 'Token expired' %}"{% endif %}>{% if row.manager_qr_is_expired %}{% tr "Expired" %}{% else %}{% tr "Show QR" %}{% endif %}</button>
+                    {% endif %}
+                  {% endif %}
+                  {% if model_name == "attendancetransaction" and row.has_photo %}
+                    <button type="button" class="btn view-image-btn" data-image-url="{% url 'attendance_transaction_image' row.pk %}">{% tr "Show Image" %}</button>
+                  {% endif %}
+                  {% if can_edit %}
+                    <a class="btn" href="{% url 'model_edit' model_name row.pk %}">{% tr "Edit" %}</a>
+                    {% if can_soft_toggle and row.is_active is not None %}
+                      <form method="post" class="inline-form soft-toggle-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="object_id" value="{{ row.pk }}">
+                        <input type="hidden" name="delete_confirm_text" value="">
+                        {% if row.is_active %}
+                          <input type="hidden" name="action" value="deactivate">
+                          <button type="submit" class="btn">{% tr "Deactivate" %}</button>
+                        {% else %}
+                          <input type="hidden" name="action" value="restore">
+                          <button type="submit" class="btn primary">{% tr "Restore" %}</button>
+                        {% endif %}
+                      </form>
+                    {% endif %}
+                  {% elif not row.has_photo %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty">{% tr "No records yet." %}</div>
+    {% endif %}
+
+    {% if page_obj and page_obj.paginator.num_pages > 1 %}
+      <div class="pagination">
+        {% if page_obj.has_previous %}
+          <a class="btn" href="?page=1{% if query_string %}&{{ query_string }}{% endif %}">{% tr "First" %}</a>
+          <a class="btn" href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">{% tr "Previous" %}</a>
+        {% endif %}
+        <span class="btn">{% tr "Page" %} {{ page_obj.number }} {% tr "of" %} {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a class="btn" href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">{% tr "Next" %}</a>
+          <a class="btn" href="?page={{ page_obj.paginator.num_pages }}{% if query_string %}&{{ query_string }}{% endif %}">{% tr "Last" %}</a>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="footer">
+      <span style="font-size:0.78rem; color:#64748b; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="34" height="16" viewBox="0 0 68 32" aria-hidden="true" focusable="false">
+          <text x="2" y="18" font-size="15" font-weight="700" font-family="Arial, sans-serif" fill="#111827">aws</text>
+          <path d="M10 23 C24 31, 46 31, 58 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        Powered by AWS | Owned by SWAP KUWAIT
+      </span>
+    </div>
+  </div>
+  <div id="imageModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.65); z-index:99; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; padding:10px; max-width:92vw; max-height:92vh; overflow:auto;">
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:6px;">
+        <button id="imageRotateLeft" type="button" class="btn">{% tr "Rotate Left" %}</button>
+        <button id="imageRotateRight" type="button" class="btn">{% tr "Rotate Right" %}</button>
+        <button id="imageModalClose" type="button" class="btn">{% tr "Close" %}</button>
+      </div>
+      <img id="imageModalImg" src="" alt="Preview" style="width:300px; height:300px; object-fit:contain; border:1px solid #cbd5e1; border-radius:12px; display:block;">
+      <div id="imageModalMsg" style="margin-top:6px; color:#64748b; font-size:.82rem;"></div>
+    </div>
+  </div>
+  <div id="qrFullscreen" class="qr-fullscreen">
+    <div class="qr-card">
+      <div class="qr-head">
+        <div>
+          <h3 class="qr-title">{% tr "Manager QR Token" %}</h3>
+          <p class="qr-sub">{% tr "Scan this QR to post attendance for this token." %}</p>
+        </div>
+        <button id="qrFullscreenClose" type="button" class="btn qr-close">{% tr "Close" %}</button>
+      </div>
+      <div class="qr-body">
+        <div class="qr-image-box">
+          <img id="qrFullscreenImg" src="" alt="QR Code">
+        </div>
+        <div class="qr-meta">
+          <div class="qr-chip">{% tr "Live Token" %}</div>
+          <div>
+            <div class="qr-label">{% tr "Location" %}</div>
+            <div id="qrFullscreenLocation" class="qr-value">-</div>
+          </div>
+          <div>
+            <div class="qr-label">{% tr "Action" %}</div>
+            <div id="qrFullscreenAction" class="qr-value">-</div>
+          </div>
+          <div>
+            <div class="qr-label">{% tr "Expire Date" %}</div>
+            <div id="qrFullscreenExpiresAt" class="qr-value">-</div>
+          </div>
+          <div>
+            <div class="qr-label">{% tr "Manager" %}</div>
+            <div id="qrFullscreenManager" class="qr-value">-</div>
+          </div>
+          <div id="qrFullscreenMsg" style="color:#475569; font-size:.84rem;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const columnFilterSelect = document.getElementById("columnFilterSelect");
+      const columnValueFilter = document.getElementById("columnValueFilter");
+      const selectedColumn = "{{ filter_values.column|default:''|escapejs }}";
+
+      (function setupDeleteConfirmTyping() {
+        var forms = document.querySelectorAll("form.soft-toggle-form");
+        if (!forms.length) return;
+        forms.forEach(function (form) {
+          form.addEventListener("submit", function (event) {
+            var actionInput = form.querySelector("input[name='action']");
+            if (!actionInput) return;
+            var action = String(actionInput.value || "").trim().toLowerCase();
+            if (action !== "deactivate") return;
+            var typed = window.prompt("{% tr 'Type confirm to delete this record' %}", "");
+            if (String(typed || "").trim().toLowerCase() !== "confirm") {
+              event.preventDefault();
+              alert("{% tr 'Delete cancelled. You must type confirm.' %}");
+              return;
+            }
+            var hidden = form.querySelector("input[name='delete_confirm_text']");
+            if (hidden) hidden.value = "confirm";
+          });
+        });
+      })();
+
+      (function setupColumnToggles() {
+        const toggleBox = document.getElementById("colToggles");
+        const table = document.querySelector(".table-wrap table");
+        if (!toggleBox || !table) return;
+        const headerCells = table.querySelectorAll("thead th");
+        const modelName = "{{ model_name|lower }}";
+        const clearAllLabel = "{% tr 'Clear All' %}";
+        const selectAllLabel = "{% tr 'Select All' %}";
+        const defaultColumns = modelName === "attendancetransaction"
+          ? new Set(["id", "entity", "employee", "action", "actions", "occurred_at", "location"])
+          : null;
+        const controls = document.createElement("div");
+        controls.className = "col-toggles-actions";
+        const clearBtn = document.createElement("button");
+        clearBtn.type = "button";
+        clearBtn.className = "btn";
+        clearBtn.textContent = clearAllLabel;
+        const selectBtn = document.createElement("button");
+        selectBtn.type = "button";
+        selectBtn.className = "btn";
+        selectBtn.textContent = selectAllLabel;
+        controls.appendChild(clearBtn);
+        controls.appendChild(selectBtn);
+        toggleBox.appendChild(controls);
+        const toggleInputs = [];
+        headerCells.forEach((th, idx) => {
+          const label = (th.textContent || "").trim();
+          if (!label) return;
+          const wrap = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          const fieldKey = ((th.getAttribute("data-field") || "").trim().toLowerCase());
+          const normalizedLabelKey = (label || "").toLowerCase().replace(/\s+/g, "_");
+          const isActionLabel = (label || "").toLowerCase().trim() === "action";
+          input.checked = defaultColumns
+            ? (defaultColumns.has(fieldKey) || defaultColumns.has(normalizedLabelKey) || isActionLabel)
+            : true;
+          input.addEventListener("change", function () {
+            table.querySelectorAll("tr").forEach((tr) => {
+              const cell = tr.children[idx];
+              if (cell) cell.style.display = input.checked ? "" : "none";
+            });
+          });
+          toggleInputs.push(input);
+          wrap.appendChild(input);
+          wrap.appendChild(document.createTextNode(label));
+          toggleBox.appendChild(wrap);
+          if (columnFilterSelect) {
+            const option = document.createElement("option");
+            option.value = fieldKey || normalizedLabelKey;
+            option.textContent = label;
+            if (option.value === selectedColumn) option.selected = true;
+            columnFilterSelect.appendChild(option);
+          }
+          input.dispatchEvent(new Event("change"));
+        });
+        clearBtn.addEventListener("click", function () {
+          toggleInputs.forEach(function (input) {
+            input.checked = false;
+            input.dispatchEvent(new Event("change"));
+          });
+        });
+        selectBtn.addEventListener("click", function () {
+          toggleInputs.forEach(function (input) {
+            input.checked = true;
+            input.dispatchEvent(new Event("change"));
+          });
+        });
+      })();
+
+      function updateImageMeta(img) {
+        var meta = img.parentElement ? img.parentElement.querySelector(".image-meta") : null;
+        if (!meta) return;
+        var sizeText = (meta.getAttribute("data-size") || "").trim();
+        var dims = img.naturalWidth && img.naturalHeight ? (img.naturalWidth + "x" + img.naturalHeight) : "";
+        if (sizeText && dims) meta.textContent = sizeText + " | " + dims;
+        else meta.textContent = sizeText || dims || "";
+      }
+
+      var images = document.querySelectorAll("img.image-preview");
+      images.forEach(function (img) {
+        if (img.complete) updateImageMeta(img);
+        img.addEventListener("load", function () { updateImageMeta(img); });
+      });
+
+      (function setupRowImageViewer() {
+        var modal = document.getElementById("imageModal");
+        var modalImg = document.getElementById("imageModalImg");
+        var modalMsg = document.getElementById("imageModalMsg");
+        var closeBtn = document.getElementById("imageModalClose");
+        var rotateLeftBtn = document.getElementById("imageRotateLeft");
+        var rotateRightBtn = document.getElementById("imageRotateRight");
+        var openButtons = document.querySelectorAll(".view-image-btn");
+        var qrButtons = document.querySelectorAll(".view-qr-btn");
+        if (!modal || !modalImg || !modalMsg || (!openButtons.length && !qrButtons.length)) return;
+        var cache = {};
+        var currentRotation = 0;
+
+        function applyRotation() {
+          modalImg.style.transform = "rotate(" + currentRotation + "deg)";
+        }
+
+        function resetRotation() {
+          currentRotation = 0;
+          applyRotation();
+        }
+
+        function closeModal() {
+          modal.style.display = "none";
+          modalImg.src = "";
+          resetRotation();
+          modalMsg.textContent = "";
+        }
+        modalImg.addEventListener("error", function () {
+          if (!modal.style.display || modal.style.display === "none") return;
+          if (!modalMsg.textContent) {
+            modalMsg.textContent = "{% tr 'Unable to render QR image.' %}";
+          }
+        });
+        openButtons.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var url = btn.getAttribute("data-image-url");
+            if (!url) return;
+            modal.style.display = "flex";
+            resetRotation();
+            modalMsg.textContent = "{% tr 'Loading...' %}";
+            if (cache[url]) {
+              modalImg.src = cache[url];
+              modalMsg.textContent = "";
+              return;
+            }
+            fetch(url, { credentials: "same-origin" })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                if (!data || !data.ok || !data.image_src) {
+                  modalMsg.textContent = (data && data.error) ? data.error : "{% tr 'No image available.' %}";
+                  return;
+                }
+                cache[url] = data.image_src;
+                modalImg.src = data.image_src;
+                modalMsg.textContent = "";
+              })
+              .catch(function () {
+                modalMsg.textContent = "{% tr 'No image available.' %}";
+              });
+          });
+        });
+        if (rotateLeftBtn) {
+          rotateLeftBtn.addEventListener("click", function () {
+            currentRotation -= 90;
+            applyRotation();
+          });
+        }
+        if (rotateRightBtn) {
+          rotateRightBtn.addEventListener("click", function () {
+            currentRotation += 90;
+            applyRotation();
+          });
+        }
+        closeBtn.addEventListener("click", closeModal);
+        modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
+      })();
+
+      (function setupFullscreenQrViewer() {
+        var qrModal = document.getElementById("qrFullscreen");
+        var qrImg = document.getElementById("qrFullscreenImg");
+        var qrLocation = document.getElementById("qrFullscreenLocation");
+        var qrAction = document.getElementById("qrFullscreenAction");
+        var qrExpiresAt = document.getElementById("qrFullscreenExpiresAt");
+        var qrManager = document.getElementById("qrFullscreenManager");
+        var qrMsg = document.getElementById("qrFullscreenMsg");
+        var qrClose = document.getElementById("qrFullscreenClose");
+        var qrButtons = document.querySelectorAll(".view-qr-btn");
+        if (!qrModal || !qrImg || !qrLocation || !qrAction || !qrExpiresAt || !qrManager || !qrClose || !qrButtons.length) return;
+        var refreshTimer = null;
+        var activePayloadUrl = null;
+
+        function closeQr() {
+          if (refreshTimer) {
+            clearTimeout(refreshTimer);
+            refreshTimer = null;
+          }
+          qrModal.style.display = "none";
+          qrImg.src = "";
+          qrMsg.textContent = "";
+          activePayloadUrl = null;
+        }
+
+        function renderPayload(payload) {
+          if (!payload) return;
+          var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=700x700&data=" + encodeURIComponent(payload);
+          qrImg.src = qrUrl;
+        }
+
+        function fetchLivePayload(url, intervalSec) {
+          if (!url || qrModal.style.display === "none" || activePayloadUrl !== url) return;
+          fetch(url, { credentials: "same-origin" })
+            .then(function (response) {
+              if (!response.ok) throw new Error("HTTP " + response.status);
+              return response.json();
+            })
+            .then(function (data) {
+              if (activePayloadUrl !== url) return;
+              if (!data || !data.ok || !data.payload) {
+                qrMsg.textContent = "{% tr 'Unable to load live QR payload.' %}";
+                return;
+              }
+              renderPayload(data.payload);
+              var secondsLeft = data.live_rotation && data.live_rotation.seconds_left;
+              if (secondsLeft) {
+                qrMsg.textContent = "{% tr 'Live QR refreshes automatically.' %} " + secondsLeft + "s";
+              } else {
+                qrMsg.textContent = "{% tr 'Live QR refreshes automatically.' %}";
+              }
+            })
+            .catch(function () {
+              if (activePayloadUrl !== url) return;
+              qrMsg.textContent = "{% tr 'Unable to load live QR payload.' %}";
+            })
+            .finally(function () {
+              if (activePayloadUrl !== url || qrModal.style.display === "none") return;
+              var nextDelayMs = Math.max(3000, (parseInt(intervalSec || "10", 10) || 10) * 1000);
+              refreshTimer = setTimeout(function () {
+                fetchLivePayload(url, intervalSec);
+              }, nextDelayMs);
+            });
+        }
+
+        qrButtons.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var payload = btn.getAttribute("data-qr-payload") || "";
+            var qrId = btn.getAttribute("data-qr-id") || "";
+            var liveEnabled = (btn.getAttribute("data-qr-live-enabled") || "0") === "1";
+            var intervalSec = btn.getAttribute("data-qr-live-interval") || "10";
+            var location = btn.getAttribute("data-qr-location") || "-";
+            var action = btn.getAttribute("data-qr-action") || "-";
+            var expiresAt = btn.getAttribute("data-qr-expires-at") || "-";
+            var managerName = btn.getAttribute("data-qr-manager-name") || "-";
+            var managerTitle = btn.getAttribute("data-qr-manager-title") || "-";
+            if (!payload && !liveEnabled) return;
+            qrLocation.textContent = location;
+            qrAction.textContent = action;
+            qrExpiresAt.textContent = expiresAt;
+            qrManager.textContent = managerName + " (" + managerTitle + ")";
+            qrMsg.textContent = "{% tr 'Use this code immediately before it expires.' %}";
+            qrModal.style.display = "flex";
+            if (liveEnabled && qrId) {
+              activePayloadUrl = "/admin-home/manager-qr/" + encodeURIComponent(qrId) + "/live-payload/";
+              fetchLivePayload(activePayloadUrl, intervalSec);
+            } else {
+              activePayloadUrl = null;
+              renderPayload(payload);
+            }
+          });
+        });
+
+        qrImg.addEventListener("error", function () {
+          if (qrModal.style.display === "none") return;
+          qrMsg.textContent = "{% tr 'Unable to render QR image.' %}";
+        });
+        qrClose.addEventListener("click", closeQr);
+        qrModal.addEventListener("click", function (e) { if (e.target === qrModal) closeQr(); });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && qrModal.style.display !== "none") closeQr();
+        });
+      })();
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var menus = Array.prototype.slice.call(document.querySelectorAll('details.menu-dd'));
+      if (!menus.length) return;
+
+      document.addEventListener('click', function (event) {
+        menus.forEach(function (menu) {
+          if (!menu.contains(event.target)) {
+            menu.removeAttribute('open');
+          }
+        });
+      });
+
+      menus.forEach(function (menu) {
+        menu.addEventListener('toggle', function () {
+          if (!menu.open) return;
+          menus.forEach(function (other) {
+            if (other !== menu) other.removeAttribute('open');
+          });
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        menus.forEach(function (menu) { menu.removeAttribute('open'); });
+      });
+    })();
+  </script>
+</body>
+</html>

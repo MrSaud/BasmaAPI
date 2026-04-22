@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWAP-ATTENDANCE</title>
+  <style>
+    :root { --bg:#eef2f6; --panel:#fff; --text:#1e293b; --muted:#64748b; --border:#cbd5e1; --brand: {{ admin_theme_color|default:"#0284c7" }}; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:linear-gradient(120deg,#eef2f6,#e0f2fe 50%,#f1f5f9); color:var(--text); }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 20px 16px 30px; }
+    .top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; margin-bottom:12px; }
+    .title-wrap { display:flex; gap:10px; }
+    .entity-logo { width:52px; height:52px; object-fit:contain; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    .btn { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; padding:2px 8px; border-radius:10px; border:1px solid var(--border); background:#fff; color:var(--text); font-weight:600; font-size:.82rem; cursor:pointer; }
+    .btn.primary { background:var(--brand); border-color:var(--brand); color:#fff; }
+    .panel { border:1px solid var(--border); border-radius:12px; background:var(--panel); padding:12px; margin-bottom:10px; }
+    .table-wrap { border:1px solid var(--border); border-radius:10px; overflow:auto; }
+    table { width:100%; border-collapse: collapse; min-width: 1020px; }
+    th, td { border-bottom:1px solid #e2e8f0; text-align:left; padding:8px; font-size:.82rem; vertical-align:top; }
+    th { background:#f8fafc; }
+    input[type="text"], input[type="password"] { width: 100%; border:1px solid var(--border); border-radius:8px; padding:6px 8px; font-size:.82rem; }
+    .footer { margin-top: 12px; text-align:center; color:var(--muted); font-size:.84rem; }
+    .pager { display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap; }
+  </style>
+  
+  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1 style="margin:0;">User Accounts (Super Admin)</h1>
+          <p style="margin:6px 0 0; color:#64748b;">{% tr "Entity" %}: {{ admin_entity_display_name|default:footer_entity_name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% endif %} | {% tr "User" %}: {{ footer_user_name }}</p>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a class="btn" href="{% url 'admin_home' %}">{% tr "Home" %}</a>
+        <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
+      </div>
+    </div>
+
+    <form method="get" class="panel">
+      <label for="q" style="display:block; color:#64748b; margin-bottom:4px;">{% tr "Search User" %}</label>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input id="q" name="q" type="text" value="{{ search }}" placeholder="{% tr 'username / name / email' %}" style="max-width:420px;">
+        <button class="btn primary" type="submit">{% tr "Apply Filter" %}</button>
+      </div>
+    </form>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>{% tr "User" %}</th>
+            <th>Email</th>
+            <th>{% tr "Employee" %}</th>
+            <th>Username</th>
+            <th>Password</th>
+            <th>is_staff</th>
+            <th>is_active</th>
+            <th>{% tr "Actions" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+            <tr>
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <td>{{ u.id }}</td>
+                <td>{{ u.get_full_name|default:u.username }}</td>
+                <td>{{ u.email|default:"-" }}</td>
+                <td>{% if u.employee_profile %}{{ u.employee_profile.full_name }}{% else %}-{% endif %}</td>
+                <td><input type="text" name="username" value="{{ u.username }}"></td>
+                <td><input type="password" name="password" placeholder="{% tr 'Leave blank to keep' %}"></td>
+                <td><input type="checkbox" name="is_staff" {% if u.is_staff %}checked{% endif %}></td>
+                <td><input type="checkbox" name="is_active" {% if u.is_active %}checked{% endif %}></td>
+                <td><button type="submit" class="btn primary">Update</button></td>
+              </form>
+            </tr>
+          {% empty %}
+            <tr><td colspan="9" style="color:#64748b;">No users found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pager">
+      {% if page_obj.has_previous %}
+        <a class="btn" href="?q={{ search|urlencode }}&page={{ page_obj.previous_page_number }}">{% tr "Previous" %}</a>
+      {% endif %}
+      <span>{% tr "Page" %} {{ page_obj.number }} {% tr "of" %} {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a class="btn" href="?q={{ search|urlencode }}&page={{ page_obj.next_page_number }}">{% tr "Next" %}</a>
+      {% endif %}
+    </div>
+
+    <div class="footer">{% tr "Powered by AWS" %} | {% tr "Owned by SWAP KUWAIT" %}</div>
+  </div>
+</body>
+</html>

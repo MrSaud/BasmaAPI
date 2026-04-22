@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWAP-ATTENDANCE</title>
+  <style>
+    :root {
+      --bg: #eef2f6;
+      --panel: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --brand: {{ admin_theme_color|default:"#0284c7" }};
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(120deg, #eef2f6, #e0f2fe 50%, #f1f5f9);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px 36px;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .title-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .entity-logo {
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      flex-shrink: 0;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    .filters {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .menu-dd { position: relative; }
+    .menu-dd > summary { list-style: none; }
+    .menu-dd > summary::-webkit-details-marker { display: none; }
+    .menu-list { display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:190px; background:#fff; border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 20px rgba(15,23,42,.12); padding:6px; z-index:25; flex-direction:column; gap:6px; }
+    .menu-dd[open] .menu-list { display:flex; }
+    .menu-list .btn { width:100%; justify-content:flex-start; }
+    .side-menu-panel .menu-list {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: min(280px, 80vw);
+      height: 100vh;
+      max-height: 100vh;
+      padding: 56px 12px 12px;
+      border-radius: 0;
+      border-right: 1px solid var(--border);
+      border-left: 0;
+      border-top: 0;
+      box-shadow: 16px 0 32px rgba(15, 23, 42, 0.18);
+      background: #ffffff;
+      overflow-y: auto;
+      z-index: 30;
+    }
+    .wrap { padding-left: 300px; max-width: none; width: 100%; margin: 0; }
+    .btn {
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .btn.primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf2f7;
+      text-align: left;
+      font-size: 0.82rem;
+      vertical-align: top;
+    }
+    th {
+      background: #f8fafc;
+      color: #334155;
+      position: sticky;
+      top: 0;
+    }
+    .empty {
+      padding: 14px;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      background: #fff;
+    }
+    .footer {
+      margin-top: 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+    .pagination {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .pagination .btn {
+      padding: 2px 8px;
+      font-size: 0.82rem;
+    }
+  </style>
+  
+  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1>{{ title }}</h1>
+          <p class="filters">{% tr "Entity" %}: {{ admin_entity_display_name|default:footer_entity_name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% endif %} | {% tr "User" %}: {{ footer_user_name }}</p>
+          {% if filter_lines %}
+            {% for line in filter_lines %}
+              <p class="filters">{{ line }}</p>
+            {% endfor %}
+          {% else %}
+            <p class="filters">{% tr "No filters applied." %}</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="history.length > 1 ? history.back() : window.location='{% url 'reports_home' %}';" type="button">{% tr "Back" %}</button>
+        <details class="menu-dd">
+          <summary class="btn">{% tr "Language" %}</summary>
+          <div class="menu-list">
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=ar&next={{ request.get_full_path|urlencode }}">🇰🇼 Arabic</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=en&next={{ request.get_full_path|urlencode }}">🇺🇸 English</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=es&next={{ request.get_full_path|urlencode }}">🇪🇸 Espanol</a>
+          </div>
+        </details>
+        <nav class="side-menu-panel">
+          <div class="menu-list">
+            <a class="btn" href="{% url 'admin_home' %}">{% tr "Home" %}</a>
+            <a class="btn" href="{% url 'reports_home' %}">{% tr "Reports" %}</a>
+            <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
+            <a class="btn primary" href="{{ download_url }}{% if query_string %}?{{ query_string }}{% endif %}">{% tr "Download PDF" %}</a>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    {% if rows %}
+      <div class="panel">
+        <table>
+          <thead>
+            <tr>
+              {% for head in headers %}
+                <th>{{ head }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                {% for col in row %}
+                  <td>
+                    {% if col == True or col == "True" %}
+                      <span class="bool-indicator true" title="{% tr 'True' %}">&#10003;</span>
+                    {% elif col == False or col == "False" %}
+                      <span class="bool-indicator false" title="{% tr 'False' %}">&#10005;</span>
+                    {% else %}
+                      {{ col }}
+                    {% endif %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty">{% tr "No records found for current filters." %}</div>
+    {% endif %}
+
+    {% if page_obj and page_obj.paginator.num_pages > 1 %}
+      <div class="pagination">
+        {% if page_obj.has_previous %}
+          <a class="btn" href="?{% if query_string %}{{ query_string }}&{% endif %}page=1">{% tr "First" %}</a>
+          <a class="btn" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">{% tr "Previous" %}</a>
+        {% endif %}
+        <span class="btn">{% tr "Page" %} {{ page_obj.number }} {% tr "of" %} {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a class="btn" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">{% tr "Next" %}</a>
+          <a class="btn" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.paginator.num_pages }}">{% tr "Last" %}</a>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="footer">
+      <span style="font-size:0.78rem; color:#64748b; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="34" height="16" viewBox="0 0 68 32" aria-hidden="true" focusable="false">
+          <text x="2" y="18" font-size="15" font-weight="700" font-family="Arial, sans-serif" fill="#111827">aws</text>
+          <path d="M10 23 C24 31, 46 31, 58 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        Powered by AWS | Owned by SWAP KUWAIT
+      </span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var menus = Array.prototype.slice.call(document.querySelectorAll('details.menu-dd'));
+      if (!menus.length) return;
+
+      document.addEventListener('click', function (event) {
+        menus.forEach(function (menu) {
+          if (!menu.contains(event.target)) {
+            menu.removeAttribute('open');
+          }
+        });
+      });
+
+      menus.forEach(function (menu) {
+        menu.addEventListener('toggle', function () {
+          if (!menu.open) return;
+          menus.forEach(function (other) {
+            if (other !== menu) other.removeAttribute('open');
+          });
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        menus.forEach(function (menu) { menu.removeAttribute('open'); });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWAP-ATTENDANCE</title>
+  <style>
+    :root { --bg:#eef2f6; --panel:#fff; --text:#1e293b; --muted:#64748b; --border:#cbd5e1; --brand: {{ admin_theme_color|default:"#0284c7" }}; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:linear-gradient(120deg,#eef2f6,#e0f2fe 50%,#f1f5f9); color:var(--text); }
+    .wrap { max-width: 1250px; margin: 0 auto; padding: 20px 16px 30px; }
+    .top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; margin-bottom:12px; }
+    .title-wrap { display:flex; gap:10px; }
+    .entity-logo { width:52px; height:52px; object-fit:contain; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .menu-dd { position: relative; }
+    .menu-dd > summary { list-style: none; }
+    .menu-dd > summary::-webkit-details-marker { display: none; }
+    .menu-list {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 180px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+      padding: 6px;
+      z-index: 25;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .menu-dd[open] .menu-list { display: flex; }
+    .menu-list .btn { width: 100%; justify-content: flex-start; }
+    .side-menu-panel .menu-list {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: min(280px, 80vw);
+      height: 100vh;
+      max-height: 100vh;
+      padding: 56px 12px 12px;
+      border-radius: 0;
+      border-right: 1px solid var(--border);
+      border-left: 0;
+      border-top: 0;
+      box-shadow: 16px 0 32px rgba(15, 23, 42, 0.18);
+      background: #ffffff;
+      overflow-y: auto;
+      z-index: 30;
+    }
+    .wrap { padding-left: 300px; max-width: none; width: 100%; margin: 0; }
+    .btn { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; padding:2px 8px; border-radius:10px; border:1px solid var(--border); background:#fff; color:var(--text); font-weight:600; font-size:.82rem; cursor:pointer; }
+    .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .btn.reject { background:#fff1f2; color:#b91c1c; border-color:#fecdd3; }
+    .panel { border:1px solid var(--border); border-radius:12px; background:var(--panel); padding:12px; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { text-align:left; vertical-align:top; border-bottom:1px solid #e2e8f0; padding:10px 8px; font-size:.84rem; }
+    th { background:#f8fafc; }
+    .chip { display:inline-flex; padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:.78rem; font-weight:700; }
+    .chip.pending { background:#fff7ed; border-color:#fdba74; color:#9a3412; }
+    .chip.approved { background:#f0fdf4; border-color:#86efac; color:#166534; }
+    .chip.rejected { background:#fff1f2; border-color:#fda4af; color:#9f1239; }
+    .actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .pagination { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; align-items:center; }
+    .footer { margin-top: 12px; text-align:center; color:var(--muted); font-size:.84rem; }
+    @media (max-width: 760px) {
+      .wrap {
+        max-width: 100%;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="{% static 'basmaapp/admin-modern.css' %}">
+  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1 style="margin:0;">{% tr "Activation Requests" %} {% if pending_count %}({{ pending_count }}){% endif %}</h1>
+          <p style="margin:6px 0 0; color:#64748b;">{% tr "Entity" %}: {{ admin_entity_display_name|default:footer_entity_name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% endif %} | {% tr "User" %}: {{ footer_user_name }}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="history.length > 1 ? history.back() : window.location='/admin-login/';" type="button">{% tr "Back" %}</button>
+        <details class="menu-dd">
+          <summary class="btn">{% tr "Language" %}</summary>
+          <div class="menu-list">
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=ar&next={{ request.get_full_path|urlencode }}" title="Arabic">🇰🇼 Arabic</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=en&next={{ request.get_full_path|urlencode }}" title="English">🇺🇸 English</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=es&next={{ request.get_full_path|urlencode }}" title="Spanish">🇪🇸 Espanol</a>
+          </div>
+        </details>
+        <nav class="side-menu-panel">
+          <div class="menu-list">
+            <a class="btn" href="{% url 'admin_home' %}">{% tr "Home" %}</a>
+            <a class="btn" href="{% url 'admin_dashboard' %}">{% tr "Dashboard" %}</a>
+            {% if can_view_exceptions %}
+              <a class="btn" href="{% url 'attendance_exceptions' %}">{% tr "Attendance Exceptions" %}</a>
+            {% endif %}
+            {% if can_view_audit_insights %}
+              <a class="btn" href="{% url 'audit_insights' %}">{% tr "Audit Insights" %}</a>
+            {% endif %}
+            {% if can_manage_privileges %}
+              <a class="btn" href="{% url 'privilege_matrix' %}">{% tr "Privileges Matrix" %}</a>
+            {% endif %}
+            {% if can_view_realtime_alerts %}
+              <a class="btn" href="{% url 'realtime_alerts' %}">{% tr "Realtime Alerts" %}{% if realtime_alert_count %} ({{ realtime_alert_count }}){% endif %}</a>
+            {% endif %}
+            {% if can_manage_activation_requests %}
+              <a class="btn" href="{% url 'activation_requests' %}">{% tr "Activation Requests" %}{% if pending_activation_requests_count %} ({{ pending_activation_requests_count }}){% endif %}</a>
+            {% endif %}
+            {% if can_import_data %}
+              <a class="btn" href="{% url 'data_import' %}">{% tr "Import CSV" %}</a>
+            {% endif %}
+            {% if can_manage_user_accounts %}
+              <a class="btn" href="{% url 'super_admin_user_accounts' %}">User Accounts</a>
+            {% endif %}
+            <a class="btn" href="{% url 'reports_home' %}">{% tr "Reports" %}</a>
+            <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
+            {% if show_django_admin_button %}
+              <a class="btn primary" href="/admin/">{% tr "Open Django Admin" %}</a>
+            {% endif %}
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <div class="panel">
+      <form method="get" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        {% if is_superuser %}
+          <label style="display:flex; align-items:center; gap:6px;">
+            <span>{% tr "Scope" %}</span>
+            <select name="scope" class="btn" style="height:32px;">
+              <option value="all" {% if is_all_scope %}selected{% endif %}>{% tr "All Entities" %}</option>
+              <option value="entity" {% if not is_all_scope %}selected{% endif %}>{% tr "Current Entity" %}</option>
+            </select>
+          </label>
+        {% endif %}
+        <label style="display:flex; align-items:center; gap:6px;">
+          <span>{% tr "Status" %}</span>
+          <select name="status" class="btn" style="height:32px;">
+            <option value="ALL" {% if status_filter == "ALL" %}selected{% endif %}>{% tr "All" %}</option>
+            <option value="PENDING" {% if status_filter == "PENDING" %}selected{% endif %}>PENDING</option>
+            <option value="APPROVED" {% if status_filter == "APPROVED" %}selected{% endif %}>APPROVED</option>
+            <option value="REJECTED" {% if status_filter == "REJECTED" %}selected{% endif %}>REJECTED</option>
+          </select>
+        </label>
+        <button type="submit" class="btn primary">{% tr "Apply" %}</button>
+      </form>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>{% tr "Status" %}</th>
+            {% if is_all_scope %}
+              <th>{% tr "Entity" %}</th>
+            {% endif %}
+            <th>{% tr "Employee" %}</th>
+            <th>{% tr "Identifier" %}</th>
+            <th>{% tr "Lookup Field" %}</th>
+            <th>{% tr "Requested At" %}</th>
+            <th>{% tr "Decided At" %}</th>
+            <th>{% tr "Decided By" %}</th>
+            <th>{% tr "Actions" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in page_obj.object_list %}
+            <tr>
+              <td>{{ req.id }}</td>
+              <td>
+                <span class="chip {% if req.status == 'PENDING' %}pending{% elif req.status == 'APPROVED' %}approved{% else %}rejected{% endif %}">
+                  {{ req.status }}
+                </span>
+              </td>
+              {% if is_all_scope %}
+                <td>{{ req.entity.name }}{% if req.entity.code %} ({{ req.entity.code }}){% endif %}</td>
+              {% endif %}
+              <td>{{ req.employee.full_name }}{% if req.employee.employee_no %} ({{ req.employee.employee_no }}){% endif %}</td>
+              <td>{{ req.requested_identifier }}</td>
+              <td>{{ req.lookup_field }}</td>
+              <td>{{ req.requested_at|date:"Y-m-d H:i:s" }}</td>
+              <td>{% if req.decided_at %}{{ req.decided_at|date:"Y-m-d H:i:s" }}{% else %}-{% endif %}</td>
+              <td>{% if req.decided_by %}{{ req.decided_by.username }}{% else %}-{% endif %}</td>
+              <td>
+                {% if req.status == "PENDING" and can_decide %}
+                  <div class="actions">
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="request_id" value="{{ req.id }}">
+                      <input type="hidden" name="action" value="activate">
+                      <button type="submit" class="btn primary">{% tr "Activate" %}</button>
+                    </form>
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="request_id" value="{{ req.id }}">
+                      <input type="hidden" name="action" value="reject">
+                      <button type="submit" class="btn reject">{% tr "Reject" %}</button>
+                    </form>
+                  </div>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="{% if is_all_scope %}10{% else %}9{% endif %}" style="color:#64748b;">{% tr "No activation requests." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if page_obj and page_obj.paginator.num_pages > 1 %}
+        <div class="pagination">
+          {% if page_obj.has_previous %}
+            <a class="btn" href="?page=1{% if is_superuser and is_all_scope %}&scope=all{% endif %}{% if status_filter and status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}">{% tr "First" %}</a>
+            <a class="btn" href="?page={{ page_obj.previous_page_number }}{% if is_superuser and is_all_scope %}&scope=all{% endif %}{% if status_filter and status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}">{% tr "Previous" %}</a>
+          {% endif %}
+          <span class="btn">{% tr "Page" %} {{ page_obj.number }} {% tr "of" %} {{ page_obj.paginator.num_pages }}</span>
+          {% if page_obj.has_next %}
+            <a class="btn" href="?page={{ page_obj.next_page_number }}{% if is_superuser and is_all_scope %}&scope=all{% endif %}{% if status_filter and status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}">{% tr "Next" %}</a>
+            <a class="btn" href="?page={{ page_obj.paginator.num_pages }}{% if is_superuser and is_all_scope %}&scope=all{% endif %}{% if status_filter and status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}">{% tr "Last" %}</a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="footer">{% tr "Powered by AWS" %} | {% tr "Owned by SWAP KUWAIT" %}</div>
+  </div>
+  <script>
+    (function () {
+      var menus = Array.prototype.slice.call(document.querySelectorAll('details.menu-dd'));
+      if (!menus.length) return;
+
+      document.addEventListener('click', function (event) {
+        menus.forEach(function (menu) {
+          if (!menu.contains(event.target)) {
+            menu.removeAttribute('open');
+          }
+        });
+      });
+
+      menus.forEach(function (menu) {
+        menu.addEventListener('toggle', function () {
+          if (!menu.open) return;
+          menus.forEach(function (other) {
+            if (other !== menu) other.removeAttribute('open');
+          });
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        menus.forEach(function (menu) { menu.removeAttribute('open'); });
+      });
+    })();
+  </script>
+</body>
+</html>

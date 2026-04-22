@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWAP-ATTENDANCE</title>
+  <style>
+    :root {
+      --bg: #eef2f6;
+      --panel: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --brand: {{ admin_theme_color|default:"#0284c7" }};
+      --brand-dark: {{ admin_theme_color_secondary|default:admin_theme_color_dark|default:"#0369a1" }};
+      --font-base: {% if admin_font_family %}{{ admin_font_family }}{% else %}-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif{% endif %};
+      --danger: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-base);
+      color: var(--text);
+      background: var(--bg);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 20px 16px 32px; }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .title-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .entity-logo {
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      flex-shrink: 0;
+    }
+    h1 { margin: 0; font-size: 1.35rem; }
+    .sub { margin: 5px 0 0; color: var(--muted); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .menu-dd { position: relative; }
+    .menu-dd > summary { list-style: none; }
+    .menu-dd > summary::-webkit-details-marker { display: none; }
+    .menu-list { display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:180px; background:#fff; border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 20px rgba(15,23,42,.12); padding:6px; z-index:25; flex-direction:column; gap:6px; }
+    .menu-dd[open] .menu-list { display:flex; }
+    .menu-list .btn { width:100%; justify-content:flex-start; }
+    .side-menu-panel .menu-list {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: min(280px, 80vw);
+      height: 100vh;
+      max-height: 100vh;
+      padding: 56px 12px 12px;
+      border-radius: 0;
+      border-right: 1px solid var(--border);
+      border-left: 0;
+      border-top: 0;
+      box-shadow: 16px 0 32px rgba(15, 23, 42, 0.18);
+      background: #ffffff;
+      overflow-y: auto;
+      z-index: 30;
+    }
+    .wrap { padding-left: 300px; max-width: none; width: 100%; margin: 0; }
+    .btn {
+      text-decoration: none;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 2px 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn.primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 16px;
+    }
+    .errors {
+      margin-bottom: 12px;
+      border: 1px solid #fecaca;
+      background: #fef2f2;
+      color: var(--danger);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.82rem;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px 16px;
+    }
+    .field label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.86rem;
+      color: #334155;
+      font-weight: 600;
+    }
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.92rem;
+      background: #fff;
+    }
+    .help {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .field-error {
+      margin-top: 4px;
+      color: var(--danger);
+      font-size: 0.82rem;
+    }
+    .select-search {
+      margin-bottom: 8px;
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      background: #fff;
+    }
+    .logo-preview {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      margin-top: 8px;
+      display: none;
+    }
+    .branding-note {
+      margin-top: 8px;
+      border: 1px solid #fdba74;
+      background: #fff7ed;
+      color: #9a3412;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+    .photo-tools {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .photo-preview {
+      width: 200px;
+      height: 200px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      margin-top: 8px;
+      display: none;
+    }
+    .summary {
+      margin-bottom: 12px;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .summary h3 {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+    }
+    .summary table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .summary th, .summary td {
+      text-align: left;
+      border-bottom: 1px solid #dbeafe;
+      padding: 6px;
+      font-size: 0.84rem;
+      vertical-align: top;
+    }
+    .color-preview {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .color-picker-input {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      border: 0 !important;
+    }
+    .color-picker-trigger {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--brand);
+      cursor: pointer;
+      padding: 0;
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.75);
+    }
+    .color-picker-trigger:focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: 2px;
+    }
+    .color-preview-box {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--brand);
+      display: inline-block;
+    }
+    .submit {
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .footer {
+      margin-top: 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+  </style>
+  
+  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1>{{ page_title }}</h1>
+          <p class="sub">Model: {{ app_label }}.{{ model_name }}</p>
+          <p class="sub">{% tr "Entity" %}: {{ admin_entity_display_name|default:footer_entity_name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% endif %} | {% tr "User" %}: {{ footer_user_name }}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="history.length > 1 ? history.back() : window.location='/admin-home/';" type="button">{% tr "Back" %}</button>
+        <details class="menu-dd">
+          <summary class="btn">{% tr "Language" %}</summary>
+          <div class="menu-list">
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=ar&next={{ request.get_full_path|urlencode }}">🇰🇼 Arabic</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=en&next={{ request.get_full_path|urlencode }}">🇺🇸 English</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=es&next={{ request.get_full_path|urlencode }}">🇪🇸 Espanol</a>
+          </div>
+        </details>
+        <nav class="side-menu-panel">
+          <div class="menu-list">
+            <a class="btn" href="/admin-home/">{% tr "Home" %}</a>
+            <a class="btn" href="{% url 'model_records' model_name %}">{% tr "List Page" %}</a>
+            <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="panel">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="errors">{{ form.non_field_errors }}</div>
+      {% endif %}
+      {% if show_change_summary %}
+        <div class="summary">
+          <h3>{% tr "Change Summary" %}</h3>
+          {% if change_summary_items %}
+            <table>
+              <thead>
+                <tr>
+                  <th>{% tr "Field" %}</th>
+                  <th>{% tr "Old Value" %}</th>
+                  <th>{% tr "New Value" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in change_summary_items %}
+                  <tr>
+                    <td>{{ item.field }}</td>
+                    <td>{{ item.old }}</td>
+                    <td>{{ item.new }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div>{% tr "No field changes detected." %}</div>
+          {% endif %}
+          <input type="hidden" name="confirm_changes" value="1">
+        </div>
+      {% endif %}
+
+      <div class="form-grid">
+        {% for field in form %}
+          {% if not model_name == "entitysettings" or field.name != "logo64" %}
+            <div class="field">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.name == "logo64" %}
+                {% if model_name == "entitysettings" %}
+                  <input id="logo64-upload" type="file" accept="image/*" class="select-search" style="margin-top:8px;" />
+                {% endif %}
+                <img id="logo64-preview" class="logo-preview" alt="Logo preview">
+                {% if model_name == "entitysettings" %}
+                  <div class="branding-note">
+                    {% tr "Recommended: PNG/JPG, max 1 MB, square logo (e.g. 256x256)." %}
+                    <div id="logo64-meta"></div>
+                  </div>
+                {% endif %}
+              {% endif %}
+              {% if field.name == "photo_base64" %}
+                <div class="photo-tools">
+                  <button id="photo64-rotate-left" type="button" class="btn">{% tr "Rotate Left" %}</button>
+                  <button id="photo64-rotate-right" type="button" class="btn">{% tr "Rotate Right" %}</button>
+                  <span id="photo64-meta" class="help"></span>
+                </div>
+                <img id="photo64-preview" class="photo-preview" alt="Photo preview">
+              {% endif %}
+              {% if field.help_text %}
+                <div class="help">{{ field.help_text }}</div>
+              {% endif %}
+              {% if field.errors %}
+                <div class="field-error">{{ field.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+
+        {% if model_name == "managerqrcodetoken" and is_create_mode %}
+          <div class="field" style="grid-column: 1 / -1;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+              <input type="checkbox" name="notify_team_qr" value="1" style="width:auto;" {% if notify_team_qr_checked %}checked{% endif %}>
+              <span>{% tr "Send inbox notice to all employees under selected manager" %}</span>
+            </label>
+            <textarea
+              name="notify_team_message"
+              rows="3"
+              placeholder="{% tr 'Optional custom message' %}"
+              style="margin-top:8px;"
+            >{{ notify_team_message }}</textarea>
+            <div class="help">{% tr "If enabled, all direct child employees of the selected manager will receive this inbox message." %}</div>
+          </div>
+        {% endif %}
+
+        {% if model_name == "entitysettings" %}
+          {% for field in form %}
+            {% if field.name == "logo64" %}
+              <div class="field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                <input id="logo64-upload" type="file" accept="image/*" class="select-search" style="margin-top:8px;" />
+                <img id="logo64-preview" class="logo-preview" alt="Logo preview">
+                <div class="branding-note">
+                  {% tr "Recommended: PNG/JPG, max 1 MB, square logo (e.g. 256x256)." %}
+                  <div id="logo64-meta"></div>
+                </div>
+                {% if field.help_text %}
+                  <div class="help">{{ field.help_text }}</div>
+                {% endif %}
+                {% if field.errors %}
+                  <div class="field-error">{{ field.errors|join:", " }}</div>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+          <div class="field">
+            <label for="license_expire_date">{% tr "License Expire Date" %}</label>
+            <input
+              id="license_expire_date"
+              name="license_expire_date"
+              type="date"
+              value="{{ license_expire_date_value }}"
+              {% if not can_edit_license_expire_date %}disabled{% endif %}
+            >
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="submit">
+        <button type="submit" class="btn primary">{{ submit_label }}</button>
+        <a href="{% url 'model_records' model_name %}" class="btn">{% tr "Cancel" %}</a>
+      </div>
+    </form>
+    <div class="footer">
+      <span style="font-size:0.78rem; color:#64748b; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="34" height="16" viewBox="0 0 68 32" aria-hidden="true" focusable="false">
+          <text x="2" y="18" font-size="15" font-weight="700" font-family="Arial, sans-serif" fill="#111827">aws</text>
+          <path d="M10 23 C24 31, 46 31, 58 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        Powered by AWS | Owned by SWAP KUWAIT
+      </span>
+    </div>
+  </div>
+  <script>
+    (function () {
+      function getFieldLabel(selectEl) {
+        var fieldWrap = selectEl.closest(".field");
+        if (!fieldWrap) return "";
+        var labelEl = fieldWrap.querySelector("label");
+        return labelEl ? labelEl.textContent : "";
+      }
+
+      function isSearchableTarget(selectEl) {
+        const name = String(selectEl.name || "").toLowerCase();
+        const id = String(selectEl.id || "").toLowerCase();
+        const label = String(getFieldLabel(selectEl) || "").toLowerCase();
+        const haystack = name + " " + id + " " + label;
+        return haystack.includes("employee") || haystack.includes("location");
+      }
+
+      function rebuildOptions(selectEl, originalOptions, query) {
+        const q = (query || "").trim().toLowerCase();
+        const currentValue = selectEl.value;
+        selectEl.innerHTML = "";
+        let hasCurrentValue = false;
+
+        originalOptions.forEach((item) => {
+          const text = (item.text || "").toLowerCase();
+          const isEmpty = !item.value;
+          const matches = isEmpty || !q || text.includes(q);
+          if (!matches) return;
+
+          const option = document.createElement("option");
+          option.value = item.value;
+          option.text = item.text;
+          if (item.value === currentValue) {
+            option.selected = true;
+            hasCurrentValue = true;
+          }
+          selectEl.appendChild(option);
+        });
+
+        if (!hasCurrentValue && currentValue) {
+          selectEl.value = "";
+        }
+      }
+
+      const selects = document.querySelectorAll(".field select");
+      selects.forEach((selectEl) => {
+        if (!isSearchableTarget(selectEl)) return;
+        const originalOptions = Array.from(selectEl.options).map(function (option) {
+          return { value: option.value, text: option.text };
+        });
+
+        const searchInput = document.createElement("input");
+        searchInput.type = "text";
+        searchInput.className = "select-search";
+        searchInput.placeholder = "{% tr 'Search options...' %}";
+        searchInput.autocomplete = "off";
+
+        searchInput.addEventListener("input", function () {
+          rebuildOptions(selectEl, originalOptions, searchInput.value);
+        });
+
+        selectEl.parentNode.insertBefore(searchInput, selectEl);
+      });
+    })();
+
+    (function () {
+      var logoField = document.querySelector("[name='logo64']");
+      var logoPreview = document.getElementById("logo64-preview");
+      if (!logoField || !logoPreview) return;
+
+      function normalizeBase64(value) {
+        var raw = (value || "").trim();
+        if (!raw) return "";
+        if (raw.indexOf("data:image/") === 0) return raw;
+        return "data:image/png;base64," + raw;
+      }
+
+      function refreshPreview() {
+        var src = normalizeBase64(logoField.value);
+        var meta = document.getElementById("logo64-meta");
+        if (!src) {
+          logoPreview.style.display = "none";
+          logoPreview.removeAttribute("src");
+          if (meta) meta.textContent = "";
+          return;
+        }
+        logoPreview.src = src;
+        logoPreview.style.display = "block";
+        var raw = (logoField.value || "").trim();
+        if (raw.indexOf("data:image/") === 0) {
+          raw = raw.split(",", 2)[1] || "";
+        }
+        var bytes = Math.max(0, Math.floor((raw.length * 3) / 4) - (raw.endsWith("==") ? 2 : raw.endsWith("=") ? 1 : 0));
+        if (meta) {
+          meta.textContent = "{% tr 'Approx size' %}: " + (bytes / 1024).toFixed(1) + " KB";
+          if (bytes > 1024 * 1024) {
+            meta.textContent += " | {% tr 'Warning: logo is larger than recommended 1 MB.' %}";
+          }
+        }
+        var img = new Image();
+        img.onload = function () {
+          if (meta) {
+            meta.textContent = "{% tr 'Approx size' %}: " + (bytes / 1024).toFixed(1) + " KB | {% tr 'Dimensions' %}: " + img.width + "x" + img.height;
+          }
+        };
+        img.src = src;
+      }
+
+      logoField.addEventListener("input", refreshPreview);
+      var logoUpload = document.getElementById("logo64-upload");
+      if (logoUpload) {
+        logoUpload.addEventListener("change", function () {
+          var file = logoUpload.files && logoUpload.files[0];
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            var result = String(e.target && e.target.result ? e.target.result : "");
+            if (result.indexOf("base64,") !== -1) {
+              logoField.value = result.split("base64,", 2)[1] || "";
+            } else {
+              logoField.value = result;
+            }
+            refreshPreview();
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+      refreshPreview();
+    })();
+
+    (function () {
+      var photoField = document.querySelector("[name='photo_base64']");
+      var photoPreview = document.getElementById("photo64-preview");
+      var rotateLeftBtn = document.getElementById("photo64-rotate-left");
+      var rotateRightBtn = document.getElementById("photo64-rotate-right");
+      var photoMeta = document.getElementById("photo64-meta");
+      if (!photoField || !photoPreview || !rotateLeftBtn || !rotateRightBtn) return;
+
+      function normalizePhotoBase64(value) {
+        var raw = (value || "").trim();
+        if (!raw) return "";
+        if (raw.indexOf("data:image/") === 0) return raw;
+        return "data:image/jpeg;base64," + raw;
+      }
+
+      function base64Stats(rawValue) {
+        var raw = (rawValue || "").trim();
+        if (!raw) return "";
+        if (raw.indexOf("data:image/") === 0) {
+          raw = raw.split(",", 2)[1] || "";
+        }
+        var bytes = Math.max(0, Math.floor((raw.length * 3) / 4) - (raw.endsWith("==") ? 2 : raw.endsWith("=") ? 1 : 0));
+        return (bytes / 1024).toFixed(1) + " KB";
+      }
+
+      function refreshPhotoPreview() {
+        var src = normalizePhotoBase64(photoField.value);
+        if (!src) {
+          photoPreview.style.display = "none";
+          photoPreview.removeAttribute("src");
+          if (photoMeta) photoMeta.textContent = "";
+          return;
+        }
+        photoPreview.src = src;
+        photoPreview.style.display = "block";
+        if (photoMeta) {
+          photoMeta.textContent = "{% tr 'Approx size' %}: " + base64Stats(photoField.value);
+        }
+      }
+
+      function rotatePhoto(degrees) {
+        var src = normalizePhotoBase64(photoField.value);
+        if (!src) return;
+        var img = new Image();
+        img.onload = function () {
+          var width = img.width;
+          var height = img.height;
+          var canvas = document.createElement("canvas");
+          var ctx = canvas.getContext("2d");
+          if (!ctx) return;
+          var clockwise = degrees > 0;
+          canvas.width = height;
+          canvas.height = width;
+          ctx.save();
+          if (clockwise) {
+            ctx.translate(canvas.width, 0);
+            ctx.rotate(Math.PI / 2);
+          } else {
+            ctx.translate(0, canvas.height);
+            ctx.rotate(-Math.PI / 2);
+          }
+          ctx.drawImage(img, 0, 0);
+          ctx.restore();
+          var dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+          photoField.value = dataUrl.indexOf("base64,") !== -1
+            ? (dataUrl.split("base64,", 2)[1] || "")
+            : dataUrl;
+          refreshPhotoPreview();
+        };
+        img.src = src;
+      }
+
+      rotateLeftBtn.addEventListener("click", function () { rotatePhoto(-90); });
+      rotateRightBtn.addEventListener("click", function () { rotatePhoto(90); });
+      photoField.addEventListener("input", refreshPhotoPreview);
+      refreshPhotoPreview();
+    })();
+
+    (function () {
+      if ("{{ model_name }}" !== "entitysettings") return;
+
+      (function setupFontFamilySelect() {
+        var fontInput = document.querySelector("[name='font_family']");
+        if (!fontInput) return;
+        var currentValue = (fontInput.value || fontInput.getAttribute("value") || "").trim();
+        var fonts = [
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
+          "Arial, Helvetica, sans-serif",
+          "Tahoma, Geneva, sans-serif",
+          "'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif",
+          "'Times New Roman', Times, serif",
+          "Georgia, 'Times New Roman', serif",
+          "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+          "'Courier New', Courier, monospace",
+          "'Lucida Console', Monaco, monospace",
+          "system-ui, sans-serif"
+        ];
+        var select = document.createElement("select");
+        select.className = fontInput.className || "";
+        select.name = fontInput.name;
+        select.id = fontInput.id;
+
+        var emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = "{% tr 'Default system font' %}";
+        select.appendChild(emptyOption);
+
+        fonts.forEach(function (fontValue) {
+          var option = document.createElement("option");
+          option.value = fontValue;
+          option.textContent = fontValue;
+          option.style.fontFamily = fontValue;
+          select.appendChild(option);
+        });
+
+        if (currentValue && !fonts.includes(currentValue)) {
+          var customOption = document.createElement("option");
+          customOption.value = currentValue;
+          customOption.textContent = currentValue;
+          customOption.style.fontFamily = currentValue;
+          select.appendChild(customOption);
+        }
+        select.value = currentValue;
+        fontInput.parentNode.replaceChild(select, fontInput);
+      })();
+
+      function setupColorPicker(inputName, fallbackCssVar, fallbackColor) {
+        var input = document.querySelector("[name='" + inputName + "']");
+        if (!input) return;
+        var initialRaw = (input.value || input.getAttribute("value") || "").trim();
+        var normalized = initialRaw;
+        if (/^[0-9a-fA-F]{6}$/.test(normalized)) {
+          normalized = "#" + normalized;
+        }
+        if (!/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+          normalized = (getComputedStyle(document.documentElement).getPropertyValue(fallbackCssVar) || fallbackColor).trim();
+        }
+        input.setAttribute("type", "color");
+        input.value = normalized;
+        input.classList.add("color-picker-input");
+
+        var preview = document.createElement("div");
+        preview.className = "color-preview";
+        preview.innerHTML = '<button type="button" class="color-picker-trigger" aria-label="{% tr "Pick color" %}"></button><span class="color-preview-text"></span>';
+        input.parentNode.appendChild(preview);
+        var trigger = preview.querySelector(".color-picker-trigger");
+
+        function openPicker() {
+          if (typeof input.showPicker === "function") {
+            input.showPicker();
+          } else {
+            input.click();
+          }
+        }
+        if (trigger) {
+          trigger.addEventListener("click", openPicker);
+        }
+
+        function refreshColorPreview() {
+          var color = (input.value || getComputedStyle(document.documentElement).getPropertyValue(fallbackCssVar) || fallbackColor).trim();
+          var box = preview.querySelector(".color-picker-trigger");
+          var text = preview.querySelector(".color-preview-text");
+          if (box) box.style.backgroundColor = color;
+          if (text) text.textContent = color;
+        }
+        input.addEventListener("input", refreshColorPreview);
+        refreshColorPreview();
+      }
+
+      setupColorPicker("theme_color", "--brand", "#0284c7");
+      setupColorPicker("secondary_theme_color", "--brand-dark", "#0369a1");
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var menus = Array.prototype.slice.call(document.querySelectorAll('details.menu-dd'));
+      if (!menus.length) return;
+
+      document.addEventListener('click', function (event) {
+        menus.forEach(function (menu) {
+          if (!menu.contains(event.target)) {
+            menu.removeAttribute('open');
+          }
+        });
+      });
+
+      menus.forEach(function (menu) {
+        menu.addEventListener('toggle', function () {
+          if (!menu.open) return;
+          menus.forEach(function (other) {
+            if (other !== menu) other.removeAttribute('open');
+          });
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        menus.forEach(function (menu) { menu.removeAttribute('open'); });
+      });
+    })();
+  </script>
+</body>
+</html>

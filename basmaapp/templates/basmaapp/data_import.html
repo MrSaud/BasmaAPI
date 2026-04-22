@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWAP-ATTENDANCE</title>
+  <style>
+    :root { --bg:#eef2f6; --panel:#fff; --text:#1e293b; --muted:#64748b; --border:#cbd5e1; --brand: {{ admin_theme_color|default:"#0284c7" }}; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:linear-gradient(120deg,#eef2f6,#e0f2fe 50%,#f1f5f9); color:var(--text); }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 20px 16px 30px; }
+    .top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; margin-bottom:12px; }
+    .title-wrap { display:flex; gap:10px; }
+    .entity-logo { width:52px; height:52px; object-fit:contain; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    .btn { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; padding:2px 8px; border-radius:10px; border:1px solid var(--border); background:#fff; color:var(--text); font-weight:600; font-size:.82rem; cursor:pointer; }
+    .btn.primary { background:var(--brand); border-color:var(--brand); color:#fff; }
+    .panel { border:1px solid var(--border); border-radius:12px; background:var(--panel); padding:12px; margin-bottom:10px; }
+    input, select { border:1px solid var(--border); border-radius:8px; padding:7px 9px; font-size:.82rem; width:100%; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:8px; align-items:end; }
+    .ok { border:1px solid #86efac; background:#f0fdf4; color:#166534; border-radius:10px; padding:8px 10px; margin-bottom:8px; }
+    .err { border:1px solid #fca5a5; background:#fef2f2; color:#991b1b; border-radius:10px; padding:8px 10px; margin-bottom:8px; }
+    .footer { margin-top: 12px; text-align:center; color:var(--muted); font-size:.84rem; }
+    code { font-size: .78rem; }
+    .csv-code {
+      display: block;
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.45;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+    }
+  </style>
+  
+  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1 style="margin:0;">Import CSV</h1>
+          <p style="margin:6px 0 0; color:#64748b;">{% tr "Entity" %}: {{ admin_entity_display_name|default:footer_entity_name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% endif %} | {% tr "User" %}: {{ footer_user_name }}</p>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a class="btn" href="{% url 'admin_home' %}">{% tr "Home" %}</a>
+        <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
+      </div>
+    </div>
+
+    {% if result.created or result.updated %}
+      <div class="ok">Created: {{ result.created }} | Updated: {{ result.updated }}</div>
+    {% endif %}
+    {% for e in result.errors %}
+      <div class="err">{{ e }}</div>
+    {% endfor %}
+
+    <form method="post" enctype="multipart/form-data" class="panel">
+      {% csrf_token %}
+      <div class="grid">
+        <div>
+          <label style="display:block; margin-bottom:4px; color:#64748b;">Target</label>
+          <select id="targetSelect" name="target">
+            <option value="employee" {% if target == "employee" %}selected{% endif %}>Employee</option>
+            <option value="location" {% if target == "location" %}selected{% endif %}>Location</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; margin-bottom:4px; color:#64748b;">CSV File</label>
+          <input type="file" name="csv_file" accept=".csv" required>
+        </div>
+      </div>
+      <div style="margin-top:10px; display:flex; gap:8px;">
+        <button type="submit" class="btn primary">Import</button>
+      </div>
+    </form>
+
+    <div class="panel">
+      <h3 style="margin:0 0 8px;">CSV headers</h3>
+      <div id="employeeHeaders" {% if target != "employee" %}style="display:none;"{% endif %}>
+        <div style="margin-bottom:6px;"><strong>Mandatory:</strong> <code>employee_no,full_name</code></div>
+        <div><strong>Optional:</strong>
+          <code class="csv-code">username,email,first_name,last_name,password,civil_id,phone_number,is_active,is_manager,confirm_sign_period_minutes,number_working_hours_per_day,employee_uuid,device_uuid,photo_base64</code>
+        </div>
+      </div>
+      <div id="locationHeaders" {% if target != "location" %}style="display:none;"{% endif %}>
+        <div style="margin-bottom:6px;"><strong>Mandatory:</strong> <code>name</code></div>
+        <div><strong>Optional:</strong>
+          <code class="csv-code">description,latitude,longitude,is_gps_based,is_beacon_based,major_value,minor_value,rssi_threshold,beacon_uuid,is_active</code>
+        </div>
+      </div>
+    </div>
+
+  <div class="footer">{% tr "Powered by AWS" %} | {% tr "Owned by SWAP KUWAIT" %}</div>
+  </div>
+  <script>
+    (function () {
+      var targetSelect = document.getElementById("targetSelect");
+      var employeeHeaders = document.getElementById("employeeHeaders");
+      var locationHeaders = document.getElementById("locationHeaders");
+      if (!targetSelect || !employeeHeaders || !locationHeaders) return;
+      function updateHeaders() {
+        var target = (targetSelect.value || "").toLowerCase();
+        var showEmployee = target === "employee";
+        employeeHeaders.style.display = showEmployee ? "" : "none";
+        locationHeaders.style.display = showEmployee ? "none" : "";
+      }
+      targetSelect.addEventListener("change", updateHeaders);
+      updateHeaders();
+    })();
+  </script>
+</body>
+</html>

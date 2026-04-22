@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWAP-ATTENDANCE</title>
+  <style>
+    :root {
+      --bg: #eef2f6;
+      --panel: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --brand: {{ admin_theme_color|default:"#0284c7" }};
+      --danger: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: linear-gradient(120deg, #eef2f6, #e0f2fe 50%, #f1f5f9);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px 36px;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .title-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .entity-logo {
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      flex-shrink: 0;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.7rem;
+      line-height: 1.2;
+    }
+    .sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .menu-dd { position: relative; }
+    .menu-dd > summary { list-style: none; }
+    .menu-dd > summary::-webkit-details-marker { display: none; }
+    .menu-list {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 180px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+      padding: 6px;
+      z-index: 25;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .menu-dd[open] .menu-list { display: flex; }
+    .menu-list .btn { width: 100%; justify-content: flex-start; }
+    .side-menu-panel .menu-list {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: min(280px, 80vw);
+      height: 100vh;
+      max-height: 100vh;
+      padding: 56px 12px 12px;
+      border-radius: 0;
+      border-right: 1px solid var(--border);
+      border-left: 0;
+      border-top: 0;
+      box-shadow: 16px 0 32px rgba(15, 23, 42, 0.18);
+      background: #ffffff;
+      overflow-y: auto;
+      z-index: 30;
+    }
+    .wrap { padding-left: 300px; max-width: none; width: 100%; margin: 0; }
+    .btn {
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .btn.primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+    }
+    .card .label {
+      color: var(--muted);
+      font-size: 0.84rem;
+      margin-bottom: 6px;
+    }
+    .card .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .section h2 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+    }
+    .filter-bar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: end;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 8px;
+      z-index: 3;
+    }
+    .filter-field label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .filter-field input {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      background: #fff;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+    }
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+    }
+    .metric .name {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-bottom: 4px;
+    }
+    .metric .num {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .metric.fail .num {
+      color: var(--danger);
+    }
+    .table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: auto;
+    }
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 10px;
+    }
+    .chart-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      padding: 10px;
+    }
+    .chart-title {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+    .chart-canvas {
+      width: 100%;
+      height: 220px;
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 680px;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf2f7;
+      font-size: 0.82rem;
+      vertical-align: top;
+    }
+    th {
+      background: #f8fafc;
+      color: #334155;
+    }
+    .empty {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .note {
+      margin: -4px 0 12px;
+      color: #c2410c;
+      font-size: 0.88rem;
+    }
+
+    .footer {
+      margin-top: 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+  </style>
+  
+  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1>{% tr "Dashboard" %}</h1>
+          <p class="sub">{% tr "Entity" %}: {{ admin_entity_display_name|default:entity.name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% elif entity.code %} ({{ entity.code }}){% endif %}</p>
+          <p class="sub">{% tr "User" %}: {{ footer_user_name }}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="history.length > 1 ? history.back() : window.location='/admin-home/';" type="button">{% tr "Back" %}</button>
+        <details class="menu-dd">
+          <summary class="btn">{% tr "Language" %}</summary>
+          <div class="menu-list">
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=ar&next={{ request.get_full_path|urlencode }}" title="Arabic">🇰🇼 Arabic</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=en&next={{ request.get_full_path|urlencode }}" title="English">🇺🇸 English</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=es&next={{ request.get_full_path|urlencode }}" title="Spanish">🇪🇸 Espanol</a>
+          </div>
+        </details>
+        <nav class="side-menu-panel">
+          <div class="menu-list">
+            <a class="btn" href="{% url 'admin_home' %}">{% tr "Home" %}</a>
+            {% if can_view_exceptions %}
+              <a class="btn" href="{% url 'attendance_exceptions' %}">{% tr "Attendance Exceptions" %}</a>
+            {% endif %}
+            {% if can_view_audit_insights %}
+              <a class="btn" href="{% url 'audit_insights' %}">{% tr "Audit Insights" %}</a>
+            {% endif %}
+            {% if can_manage_privileges %}
+              <a class="btn" href="{% url 'privilege_matrix' %}">{% tr "Privileges Matrix" %}</a>
+            {% endif %}
+            {% if can_manage_activation_requests and pending_activation_requests_count %}
+              <a class="btn" href="{% url 'activation_requests' %}">{% tr "Activation Requests" %}{% if pending_activation_requests_count %} ({{ pending_activation_requests_count }}){% endif %}</a>
+            {% endif %}
+            <a class="btn" href="{% url 'reports_home' %}">{% tr "Reports" %}</a>
+            {% if show_django_admin_button %}
+              <a class="btn primary" href="/admin/">{% tr "Open Django Admin" %}</a>
+            {% endif %}
+            <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="label">{% tr "Total Transactions" %}</div>
+        <div class="value">{{ total_transactions }}</div>
+      </div>
+      <div class="card">
+        <div class="label">{% tr "Today Transactions" %}</div>
+        <div class="value">{{ today_transactions }}</div>
+      </div>
+      <div class="card">
+        <div class="label">{% tr "Biometric Verification Failures" %}</div>
+        <div class="value">{{ fail_counts.total }}</div>
+      </div>
+      <div class="card">
+        <div class="label">{% tr "Total Locations" %}</div>
+        <div class="value">{{ location_totals.total }}</div>
+      </div>
+    </div>
+    <p class="note">{% tr "Note: failures here mean biometric verification failed, but attendance transaction was still inserted." %}</p>
+
+    <form method="get" class="filter-bar">
+      <div class="filter-field">
+        <label for="start_date">{% tr "From Date" %}</label>
+        <input id="start_date" name="start_date" type="date" value="{{ start_date }}">
+      </div>
+      <div class="filter-field">
+        <label for="end_date">{% tr "To Date" %}</label>
+        <input id="end_date" name="end_date" type="date" value="{{ end_date }}">
+      </div>
+      <div class="filter-field">
+        <label for="employee_name">{% tr "Search Name" %}</label>
+        <input id="employee_name" name="employee_name" type="text" value="{{ employee_name_filter }}">
+      </div>
+      <div class="filter-field">
+        <label for="employee_no">{% tr "Search Employee Number" %}</label>
+        <input id="employee_no" name="employee_no" type="text" value="{{ employee_no_filter }}">
+      </div>
+      <div class="filter-field">
+        <label for="civil_id">{% tr "Search Civil ID" %}</label>
+        <input id="civil_id" name="civil_id" type="text" value="{{ civil_id_filter }}">
+      </div>
+      <button class="btn primary" type="submit">{% tr "Apply Filter" %}</button>
+      <a class="btn" href="{% url 'admin_dashboard' %}">{% tr "Clear" %}</a>
+      <button class="btn" type="submit" name="preset_action" value="save">{% tr "Save Filters" %}</button>
+      {% if saved_filters_available %}
+        <a class="btn" href="{% url 'admin_dashboard' %}?preset_action=load">{% tr "Load Saved Filters" %}</a>
+      {% endif %}
+      <a class="btn" href="{% url 'admin_dashboard' %}?preset_action=clear">{% tr "Clear Saved Filters" %}</a>
+    </form>
+
+    <section class="section">
+      <h2>{% tr "Sign Actions" %}</h2>
+      <div class="metrics">
+        <div class="metric">
+          <div class="name">SIGN_IN</div>
+          <div class="num">{{ action_counts.SIGN_IN }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">SIGN_CONFIRM</div>
+          <div class="num">{{ action_counts.SIGN_CONFIRM }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">SIGN_OUT</div>
+          <div class="num">{{ action_counts.SIGN_OUT }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>{% tr "Failed Biometric Verifications" %}</h2>
+      <div class="metrics">
+        <div class="metric fail">
+          <div class="name">{% tr "SIGN_IN Failed" %}</div>
+          <div class="num">{{ fail_counts.SIGN_IN }}</div>
+        </div>
+        <div class="metric fail">
+          <div class="name">{% tr "SIGN_CONFIRM Failed" %}</div>
+          <div class="num">{{ fail_counts.SIGN_CONFIRM }}</div>
+        </div>
+        <div class="metric fail">
+          <div class="name">{% tr "SIGN_OUT Failed" %}</div>
+          <div class="num">{{ fail_counts.SIGN_OUT }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>{% tr "Top 50 Employees With Failed Biometric Verification" %}</h2>
+      {% if top_failed_employees %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{% tr "Employee ID" %}</th>
+                <th>{% tr "Employee Name" %}</th>
+                <th>{% tr "Employee No" %}</th>
+                <th>{% tr "Civil ID" %}</th>
+                <th>{% tr "Failed Count" %}</th>
+                <th>{% tr "Last Failed At" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in top_failed_employees %}
+                <tr>
+                  <td>{{ item.employee_id }}</td>
+                  <td>{{ item.employee__full_name|default:"-" }}</td>
+                  <td>{{ item.employee__employee_no|default:"-" }}</td>
+                  <td>{{ item.employee__civil_id|default:"-" }}</td>
+                  <td>{{ item.failed_count }}</td>
+                  <td>{{ item.last_failed_at|date:"Y-m-d H:i:s" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">{% tr "No failed biometric records found." %}</div>
+      {% endif %}
+    </section>
+
+    <section class="section">
+      <h2>{% tr "Employee Working Hours (Expected vs Actual)" %}</h2>
+      <div class="metrics" style="margin-bottom: 12px;">
+        <div class="metric">
+          <div class="name">{% tr "Employees" %}</div>
+          <div class="num">{{ working_hours_totals.employees }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">{% tr "Expected Hours" %}</div>
+          <div class="num">{{ working_hours_totals.expected_hours }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">{% tr "Actual Hours" %}</div>
+          <div class="num">{{ working_hours_totals.actual_hours }}</div>
+        </div>
+        <div class="metric {% if working_hours_totals.variance_hours < 0 %}fail{% endif %}">
+          <div class="name">{% tr "Variance Hours" %}</div>
+          <div class="num">{{ working_hours_totals.variance_hours }}</div>
+        </div>
+      </div>
+      {% if employee_working_hours %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{% tr "Employee ID" %}</th>
+                <th>{% tr "Employee Name" %}</th>
+                <th>{% tr "Employee No" %}</th>
+                <th>{% tr "Days" %}</th>
+                <th>{% tr "Expected Hours" %}</th>
+                <th>{% tr "Actual Hours" %}</th>
+                <th>{% tr "Variance Hours" %}</th>
+                <th>{% tr "Compliance %" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in employee_working_hours %}
+                <tr>
+                  <td>{{ item.employee_id }}</td>
+                  <td>{{ item.employee_name|default:"-" }}</td>
+                  <td>{{ item.employee_no|default:"-" }}</td>
+                  <td>{{ item.days_count }}</td>
+                  <td>{{ item.expected_hours }}</td>
+                  <td>{{ item.actual_hours }}</td>
+                  <td>{{ item.variance_hours }}</td>
+                  <td>{{ item.compliance_pct }}%</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">{% tr "No working-hours data found for current filters." %}</div>
+      {% endif %}
+    </section>
+
+    <section class="section">
+      <h2>{% tr "Charts" %}</h2>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3 class="chart-title">{% tr "Sign Actions" %}</h3>
+          <canvas id="actionsChart" class="chart-canvas"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">{% tr "Failed Biometric Verifications" %}</h3>
+          <canvas id="failuresChart" class="chart-canvas"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">{% tr "Top Locations by Transactions" %}</h3>
+          <canvas id="locationsChart" class="chart-canvas"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>{% tr "Locations" %}</h2>
+      <div class="metrics" style="margin-bottom: 12px;">
+        <div class="metric">
+          <div class="name">{% tr "Active" %}</div>
+          <div class="num">{{ location_totals.active }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">{% tr "Inactive" %}</div>
+          <div class="num">{{ location_totals.inactive }}</div>
+        </div>
+      </div>
+
+      {% if location_stats %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{% tr "Location" %}</th>
+                <th>{% tr "Total Transactions" %}</th>
+                <th>{% tr "Failed Transactions" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for location in location_stats %}
+                <tr>
+                  <td>{{ location.name }}</td>
+                  <td>{{ location.total_transactions }}</td>
+                  <td>{{ location.failed_transactions }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">{% tr "No records found for current filters." %}</div>
+      {% endif %}
+    </section>
+
+    <section class="section">
+      <h2>{% tr "Data Quality Checks" %}</h2>
+      <div class="metrics">
+        <div class="metric">
+          <div class="name">{% tr "Employees Missing Photo" %}</div>
+          <div class="num">{{ data_quality.missing_employee_photo }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">{% tr "Duplicate Civil ID Groups" %}</div>
+          <div class="num">{{ data_quality.duplicate_civil_id_groups }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">{% tr "Duplicate Employee No Groups" %}</div>
+          <div class="num">{{ data_quality.duplicate_employee_no_groups }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">{% tr "GPS Locations Missing Coordinates" %}</div>
+          <div class="num">{{ data_quality.gps_location_missing_coordinates }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">{% tr "Inactive Employees With Active Assignments" %}</div>
+          <div class="num">{{ data_quality.inactive_employee_with_active_assignment }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>{% tr "Biometric API Health" %}</h2>
+      <p class="note">{% tr "Health metrics are computed from attendance records that used FACE_COMPARE_API in the selected date range." %}</p>
+      <div class="metrics">
+        <div class="metric">
+          <div class="name">{% tr "Total API Checks" %}</div>
+          <div class="num">{{ api_health.total_face_api_checks }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">{% tr "Passed Checks" %}</div>
+          <div class="num">{{ api_health.face_api_passed }}</div>
+        </div>
+        <div class="metric">
+          <div class="name">{% tr "Success Rate" %}</div>
+          <div class="num">{{ api_health.success_rate_pct }}%</div>
+        </div>
+        <div class="metric fail">
+          <div class="name">{% tr "Failed Checks" %}</div>
+          <div class="num">{{ api_health.face_api_failed }}</div>
+        </div>
+        <div class="metric fail">
+          <div class="name">{% tr "Error Rate" %}</div>
+          <div class="num">{{ api_health.error_rate_pct }}%</div>
+        </div>
+        <div class="metric fail">
+          <div class="name">{% tr "Liveness Failures" %}</div>
+          <div class="num">{{ api_health.liveness_failures }}</div>
+        </div>
+        <div class="metric fail">
+          <div class="name">{% tr "Face Compare Failures" %}</div>
+          <div class="num">{{ api_health.compare_failures }}</div>
+        </div>
+      </div>
+      <p class="note">{% tr "Last API Failure At" %}: {% if api_health.last_face_api_failure_at %}{{ api_health.last_face_api_failure_at|date:"Y-m-d H:i:s" }}{% else %}-{% endif %}</p>
+    </section>
+    <div class="footer">
+      <span style="font-size:0.78rem; color:#64748b; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="34" height="16" viewBox="0 0 68 32" aria-hidden="true" focusable="false">
+          <text x="2" y="18" font-size="15" font-weight="700" font-family="Arial, sans-serif" fill="#111827">aws</text>
+          <path d="M10 23 C24 31, 46 31, 58 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        {% tr "Powered by AWS" %} | {% tr "Owned by SWAP KUWAIT" %}
+      </span>
+    </div>
+  </div>
+  {{ action_chart_labels|json_script:"action-chart-labels" }}
+  {{ action_chart_values|json_script:"action-chart-values" }}
+  {{ failure_chart_labels|json_script:"failure-chart-labels" }}
+  {{ failure_chart_values|json_script:"failure-chart-values" }}
+  {{ location_chart_labels|json_script:"location-chart-labels" }}
+  {{ location_chart_values|json_script:"location-chart-values" }}
+  <script>
+    (function () {
+      function parseJsonScript(id) {
+        const el = document.getElementById(id);
+        if (!el) return [];
+        try {
+          return JSON.parse(el.textContent);
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function renderBarChart(canvasId, labels, values, barColor) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        const dpr = window.devicePixelRatio || 1;
+        const cssWidth = canvas.clientWidth || 400;
+        const cssHeight = canvas.clientHeight || 220;
+        canvas.width = Math.floor(cssWidth * dpr);
+        canvas.height = Math.floor(cssHeight * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        ctx.clearRect(0, 0, cssWidth, cssHeight);
+        const leftPad = 34;
+        const rightPad = 10;
+        const topPad = 14;
+        const bottomPad = 48;
+        const chartWidth = cssWidth - leftPad - rightPad;
+        const chartHeight = cssHeight - topPad - bottomPad;
+
+        const maxVal = Math.max(1, ...values.map((v) => Number(v) || 0));
+        const count = Math.max(labels.length, 1);
+        const slot = chartWidth / count;
+        const barWidth = Math.max(16, slot * 0.6);
+
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(leftPad, topPad);
+        ctx.lineTo(leftPad, topPad + chartHeight);
+        ctx.lineTo(leftPad + chartWidth, topPad + chartHeight);
+        ctx.stroke();
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(String(maxVal), leftPad - 6, topPad + 4);
+        ctx.fillText("0", leftPad - 6, topPad + chartHeight + 4);
+
+        labels.forEach((label, i) => {
+          const value = Number(values[i] || 0);
+          const x = leftPad + i * slot + (slot - barWidth) / 2;
+          const barH = (value / maxVal) * chartHeight;
+          const y = topPad + chartHeight - barH;
+
+          ctx.fillStyle = barColor;
+          ctx.fillRect(x, y, barWidth, barH);
+
+          ctx.fillStyle = "#0f172a";
+          ctx.textAlign = "center";
+          ctx.font = "12px sans-serif";
+          ctx.fillText(String(value), x + barWidth / 2, y - 6);
+
+          const shortLabel = String(label).length > 12 ? String(label).slice(0, 12) + "..." : String(label);
+          ctx.fillStyle = "#475569";
+          ctx.fillText(shortLabel, x + barWidth / 2, topPad + chartHeight + 16);
+        });
+      }
+
+      const actionLabels = parseJsonScript("action-chart-labels");
+      const actionValues = parseJsonScript("action-chart-values");
+      const failureLabels = parseJsonScript("failure-chart-labels");
+      const failureValues = parseJsonScript("failure-chart-values");
+      const locationLabels = parseJsonScript("location-chart-labels");
+      const locationValues = parseJsonScript("location-chart-values");
+
+      const css = getComputedStyle(document.documentElement);
+      const themeBrand = (css.getPropertyValue("--brand") || "#0284c7").trim() || "#0284c7";
+      renderBarChart("actionsChart", actionLabels, actionValues, themeBrand);
+      renderBarChart("failuresChart", failureLabels, failureValues, "#b91c1c");
+      renderBarChart("locationsChart", locationLabels, locationValues, "#1d4ed8");
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var menus = Array.prototype.slice.call(document.querySelectorAll('details.menu-dd'));
+      if (!menus.length) return;
+
+      document.addEventListener('click', function (event) {
+        menus.forEach(function (menu) {
+          if (!menu.contains(event.target)) {
+            menu.removeAttribute('open');
+          }
+        });
+      });
+
+      menus.forEach(function (menu) {
+        menu.addEventListener('toggle', function () {
+          if (!menu.open) return;
+          menus.forEach(function (other) {
+            if (other !== menu) other.removeAttribute('open');
+          });
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        menus.forEach(function (menu) { menu.removeAttribute('open'); });
+      });
+    })();
+  </script>
+</body>
+</html>

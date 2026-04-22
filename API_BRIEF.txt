@@ -1,0 +1,299 @@
+AttendanceSaaS API Brief
+
+Base URL
+- http(s)://<host>/api
+
+Common Error Response
+- {"error":"<message>"}
+- Typical status codes: 400, 403 (license invalid/expired), 404
+
+1) Health Check
+- Endpoint: GET /api/basma
+- Request: none
+- Response 200:
+  {"status":"ok","app":"AttendanceSaaS"}
+
+2) List Users
+- Endpoint: GET /api/list_users
+- Request: none
+- Response 200:
+  [
+    {"id":1,"username":"...","email":"...","first_name":"...","last_name":"..."}
+  ]
+
+3) Verify Employee UUID
+- Endpoint: POST /api/employee/verify-uuid/
+- Request:
+  {"employee_uuid":"550e8400-e29b-41d4-a716-446655440000"}
+- Response 200:
+  {"message":"UUIDs match","user_id":123}
+
+4) Update Employee UUID
+- Endpoint: POST /api/employee/update-uuid/
+- Request:
+  {
+    "employee_no":12,
+    "employee_uuid":"550e8400-e29b-41d4-a716-446655440000",
+    "device_uuid":"550e8400-e29b-41d4-a716-446655440001",
+    "by_staff_id":1
+  }
+- Response 200:
+  {
+    "message":"Employee UUID updated successfully",
+    "user_id":123,
+    "employee_uuid":"...",
+    "device_uuid":"..."
+  }
+
+5) Load Employee Data
+- Endpoint: POST /api/employee/load-data/
+- Request:
+  {"employee_id":"1"}
+- Response 200:
+  Employee profile + entity + photo + working-hours fields.
+
+6) Employee Allowed Locations/Beacons
+- Endpoint: POST /api/employee/employee_locations_beacons/
+- Request:
+  {"employee_id":"1"}
+- Response 200:
+  {
+    "assignments":[
+      {
+        "location_id":1,
+        "location_name":"...",
+        "is_GPS_based":true,
+        "latitude":"...",
+        "longitude":"...",
+        "gps_radius_meters":100,
+        "is_beacon_based":false,
+        "assignment_allow_sign_in":true,
+        "assignment_allow_sign_out":true,
+        "assignment_allow_sign_confirm":true,
+        "assignment_period_to_take_action":1
+      }
+    ]
+  }
+
+7) Post Attendance Transaction
+- Endpoint: POST /api/employee/post_attendance_transaction/
+- Request:
+  {
+    "employee_id":"1",
+    "action":"SIGN_IN",
+    "location_id":"2",
+    "photo_base64":"data:image/jpeg;base64,...",
+    "device_id":"device-xyz",
+    "latitude":24.7136,
+    "longitude":46.6753,
+    "gps_accuracy_m":10,
+    "beacon_uuid":"...",
+    "beacon_major":1,
+    "beacon_minor":2,
+    "beacon_rssi":-70,
+    "transaction_comment":"..."
+  }
+- Response 201:
+  {
+    "message":"Attendance transaction recorded",
+    "transaction_id":100,
+    "action":"SIGN_IN",
+    "occurred_at":"2026-02-16T10:00:00+00:00",
+    "biometric_verify":"PASSED",
+    "biometric_error":""
+  }
+- Note:
+  Uses liveness + face-compare internally.
+
+8) Confirm Transaction Recorded
+- Endpoint: POST /api/employee/confirm_attendance_transaction_recorded/
+- Request:
+  {"transaction_id":"1"}
+- Response 200:
+  {
+    "message":"Attendance transaction exists",
+    "transaction_id":1,
+    "action":"SIGN_IN",
+    "occurred_at":"..."
+  }
+
+9) Load Recent Transactions
+- Endpoint: POST /api/employee/load_recents_transactions/
+- Request:
+  {"employee_id":"1"}
+- Response 200:
+  {
+    "transactions":[
+      {
+        "transaction_id":1,
+        "action":"SIGN_IN",
+        "occurred_at":"...",
+        "location":"...",
+        "biometric_verify":"PASSED",
+        "status":"Success",
+        "biometric_error":"",
+        "transaction_comment":""
+      }
+    ]
+  }
+
+10) Load Transactions By Date
+- Endpoint: POST /api/employee/load_transactions_by_date/
+- Request:
+  {"employee_id":"1","date_from":"2026-02-01","date_to":"2026-02-16"}
+- Response 200:
+  {
+    "transactions":[
+      {"transaction_id":1,"action":"SIGN_IN","occurred_at":"...","location":"..."}
+    ]
+  }
+
+10.1) Load Today Timeline
+- Endpoint: POST /api/employee/load_today_timeline/
+- Request:
+  {"employee_id":"1"}
+- Response 200:
+  {
+    "server_now":"2026-02-16T10:00:00+00:00",
+    "timeline":{
+      "sign_in_time":"2026-02-16T08:00:00+00:00",
+      "expected_confirm_time":"2026-02-16T08:15:00+00:00",
+      "sign_confirm_time":"2026-02-16T08:14:00+00:00",
+      "expected_sign_out_time":"2026-02-16T16:00:00+00:00",
+      "sign_out_time":null
+    }
+  }
+
+11) Load Employees By Entity
+- Endpoint: POST /api/employee/load_employees_entity/
+- Request:
+  {"entity_id":"1"}
+- Response 200:
+  {
+    "employees":[
+      {
+        "employee_id":123,
+        "employee_no":"E001",
+        "first_name":"...",
+        "last_name":"...",
+        "entity_id":1,
+        "entity_name":"...",
+        "employee_civil_id":"..."
+      }
+    ]
+  }
+- Note:
+  Current implementation appears to return early (may return first employee only).
+
+11.1) Search Employees (By Entity + Name/ID/CivilID/No)
+- Endpoint: POST /api/employee/search_employees/
+- Request:
+  {
+    "entity_id":"1",
+    "employee_name":"ali",
+    "employee_id":"12",
+    "civil_id":"123",
+    "employee_no":"E10",
+    "limit":100
+  }
+- Response 200:
+  {
+    "employees":[
+      {
+        "employee_id":12,
+        "user_id":45,
+        "name":"Ali Ahmad",
+        "civil_id":"123456789012",
+        "employee_no":"E1001"
+      }
+    ]
+  }
+
+12) Inbox Messages
+- Endpoint: POST /api/employee/inbox_messages/
+- Request:
+  {"employee_id":"1","limit":50}
+- Response 200:
+  {
+    "messages":[
+      {"message_id":10,"subject":"...","body":"...","sent_at":"...","is_read":false}
+    ]
+  }
+
+12.1) Search Inbox Messages
+- Endpoint: POST /api/employee/search_inbox_messages/
+- Request:
+  {
+    "employee_id":"1",
+    "date_from":"2026-02-01",
+    "date_to":"2026-02-29",
+    "content_contains":"policy",
+    "limit":50
+  }
+- Response 200:
+  {
+    "messages":[
+      {"message_id":10,"subject":"...","body":"...","sent_at":"...","is_read":false}
+    ]
+  }
+
+13) Mark Message As Read
+- Endpoint: POST /api/employee/set_message_read/
+- Request:
+  {"employee_id":"1","message_id":"10"}
+- Response 200:
+  {"message":"Message marked as read"}
+
+14) Update User Photo
+- Endpoint: POST /api/employee/update_user_photo/
+- Request:
+  {"employee_id":"1","photo_base64":"data:image/jpeg;base64,..."}
+- Response 200:
+  {"message":"User photo updated"}
+
+15) User Entity Info
+- Endpoint: POST /api/employee/user_entity/
+- Request:
+  {"employee_id":"1"}
+- Response 200:
+  {
+    "entity_id":1,
+    "entity_display_name":"...",
+    "entity_theme_color":"#87CEEB",
+    "entity_logo_url":"data:image/png;base64,...",
+    "number_employees":120,
+    "is_active":true
+  }
+
+16) Load Employee For Parent
+- Endpoint: POST /api/employee/load_employee_for_parent/
+- Request:
+  {"employee_id":"1"}
+- Response 200:
+  Basic employee + entity info (similar to load-data, smaller payload).
+
+17) Create Location
+- Endpoint: POST /api/employee/post_location/
+- Request:
+  {
+    "employee_id":"1",
+    "name":"HQ",
+    "description":"Main office",
+    "latitude":29.3759,
+    "longitude":47.9774,
+    "is_GPS_based":true,
+    "is_beacon_based":false,
+    "major_value":1,
+    "minor_value":2,
+    "rssi_threshold":-70,
+    "beacon_uuid":"...",
+    "is_active":true
+  }
+- Response 201:
+  {
+    "message":"Location created",
+    "location_id":15,
+    "entity_id":1,
+    "name":"HQ",
+    "is_active":true
+  }

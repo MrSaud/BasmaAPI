@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Management attendance for {{ admin_entity_display_name|default:footer_entity_name }}</title>
+  <style>
+    :root {
+      --bg: #eef2f6;
+      --text: #1e293b;
+      --muted: #64748b;
+      --panel: #ffffff;
+      --border: #cbd5e1;
+      --brand: {{ admin_theme_color|default:"#0284c7" }};
+      --brand-dark: {{ admin_theme_color_secondary|default:admin_theme_color_dark|default:"#0369a1" }};
+      --font-base: {% if admin_font_family %}{{ admin_font_family }}{% else %}-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif{% endif %};
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-base);
+      background: linear-gradient(135deg, #eef2f6, #e0f2fe 50%, #f1f5f9);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 28px 18px 40px;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .title-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .entity-logo {
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      flex-shrink: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.7rem;
+      line-height: 1.2;
+      font-family: var(--font-base);
+    }
+
+    .sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .btn {
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.82rem;
+    }
+
+    .btn.primary {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+
+    .btn.primary:hover {
+      background: var(--brand-dark);
+    }
+
+    .btn.back {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .group-block {
+      margin-bottom: 14px;
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .group-title {
+      margin: 0 0 10px;
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: var(--brand-dark);
+    }
+    .group-grid {
+      display: grid;
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .quick-search {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.92rem;
+      margin-bottom: 12px;
+      background: #fff;
+      position: sticky;
+      top: 8px;
+      z-index: 2;
+    }
+    .entity-switch {
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px 10px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 8px;
+      z-index: 3;
+    }
+    .entity-switch select {
+      min-width: 260px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 0.82rem;
+      background: #fff;
+    }
+    .license-notice {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 999;
+      border: 1px solid #fdba74;
+      background: #fff7ed;
+      color: #9a3412;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+    }
+    .notice-close {
+      position: absolute;
+      top: 4px;
+      right: 8px;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+    }
+    .alerts-panel {
+      margin: 0 0 12px;
+      border: 1px solid #fbbf24;
+      background: linear-gradient(180deg, #fffbeb 0%, #fff7d6 100%);
+      color: #7c2d12;
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    }
+    .alerts-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .alerts-title {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      color: #78350f;
+    }
+    .alerts-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid #f59e0b;
+      background: #fff;
+      color: #92400e;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+    .alerts-list {
+      display: grid;
+      gap: 8px;
+    }
+    .alert-item {
+      border: 1px solid #fed7aa;
+      background: #fff;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.8rem;
+      color: #7c2d12;
+      line-height: 1.35;
+    }
+    .alert-item strong {
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .alert-link {
+      margin-top: 10px;
+      display: inline-flex;
+      text-decoration: none;
+      font-weight: 700;
+      color: #92400e;
+      border-bottom: 1px dashed #92400e;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .name {
+      margin: 0 0 6px;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .desc {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.35;
+    }
+
+    .status {
+      margin: 0 0 14px;
+      font-size: 0.82rem;
+      color: #9a3412;
+      background: #ffedd5;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      padding: 6px 8px;
+      display: inline-block;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: auto;
+    }
+    .menu-dd { position: relative; }
+    .menu-dd > summary { list-style: none; }
+    .menu-dd > summary::-webkit-details-marker { display: none; }
+    .menu-list {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 180px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+      padding: 6px;
+      z-index: 25;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .menu-dd[open] .menu-list { display: flex; }
+    .menu-list .btn { width: 100%; justify-content: flex-start; }
+    .side-menu-panel .menu-list {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: min(280px, 80vw);
+      height: 100vh;
+      max-height: 100vh;
+      padding: 56px 12px 12px;
+      border-radius: 0;
+      border-right: 1px solid var(--border);
+      border-left: 0;
+      border-top: 0;
+      box-shadow: 16px 0 32px rgba(15, 23, 42, 0.18);
+      background: #ffffff;
+      overflow-y: auto;
+      z-index: 30;
+    }
+    .wrap {
+      padding-left: 300px;
+      padding-right: 20px;
+      max-width: none;
+      width: 100vw;
+      margin: 0;
+    }
+    .top,
+    .entity-switch,
+    .quick-search,
+    .alerts-panel,
+    .group-block,
+    .grid {
+      width: 100%;
+      max-width: none;
+    }
+
+    .empty {
+      background: #fff;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      color: var(--muted);
+    }
+
+    .footer {
+      margin-top: 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    @media (min-width: 860px) {
+      .group-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 600px) {
+      .top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+  
+  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+</head>
+<body>
+  {% if license_notice %}
+    <div class="license-notice" data-dismissible-notice>
+      <button type="button" class="notice-close" aria-label="Close">&times;</button>
+      {% if license_notice.kind == "expiring" %}
+        {% tr "License Expiration Notice" %}: {% tr "Expires on" %} {{ license_notice.date }} ({{ license_notice.days_left }} {% tr "days left" %})
+      {% else %}
+        {{ license_notice.message }}
+      {% endif %}
+    </div>
+  {% endif %}
+  <div class="wrap">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1>Management attendance for {{ admin_entity_display_name|default:footer_entity_name }}</h1>
+          <p class="sub">{% tr "Entity" %}: {{ admin_entity_display_name|default:footer_entity_name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% endif %} | {% tr "User" %}: {{ footer_user_name }}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn back" onclick="history.length > 1 ? history.back() : window.location='/admin-login/';" type="button">{% tr "Back" %}</button>
+        <details class="menu-dd">
+          <summary class="btn">{% tr "Language" %}</summary>
+          <div class="menu-list">
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=ar&next={{ request.get_full_path|urlencode }}" title="Arabic">🇰🇼 Arabic</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=en&next={{ request.get_full_path|urlencode }}" title="English">🇺🇸 English</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=es&next={{ request.get_full_path|urlencode }}" title="Spanish">🇪🇸 Espanol</a>
+          </div>
+        </details>
+        <nav class="side-menu-panel">
+          <div class="menu-list">
+            <a class="btn" href="{% url 'admin_home' %}">{% tr "Home" %}</a>
+            <a class="btn" href="{% url 'admin_dashboard' %}">{% tr "Dashboard" %}</a>
+            {% if can_view_exceptions %}
+              <a class="btn" href="{% url 'attendance_exceptions' %}">{% tr "Attendance Exceptions" %}</a>
+            {% endif %}
+            {% if can_view_audit_insights %}
+              <a class="btn" href="{% url 'audit_insights' %}">{% tr "Audit Insights" %}</a>
+            {% endif %}
+            {% if can_manage_privileges %}
+              <a class="btn" href="{% url 'privilege_matrix' %}">{% tr "Privileges Matrix" %}</a>
+            {% endif %}
+            {% if can_view_realtime_alerts %}
+              <a class="btn" href="{% url 'realtime_alerts' %}">{% tr "Realtime Alerts" %}{% if realtime_alert_count %} ({{ realtime_alert_count }}){% endif %}</a>
+            {% endif %}
+            {% if can_manage_activation_requests and pending_activation_requests_count %}
+              <a class="btn" href="{% url 'activation_requests' %}">{% tr "Activation Requests" %}{% if pending_activation_requests_count %} ({{ pending_activation_requests_count }}){% endif %}</a>
+            {% endif %}
+            {% if can_import_data %}
+              <a class="btn" href="{% url 'data_import' %}">{% tr "Import CSV" %}</a>
+            {% endif %}
+            {% if can_manage_user_accounts %}
+              <a class="btn" href="{% url 'super_admin_user_accounts' %}">User Accounts</a>
+            {% endif %}
+            <a class="btn" href="{% url 'reports_home' %}">{% tr "Reports" %}</a>
+            <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
+            {% if show_django_admin_button %}
+              <a class="btn primary" href="/admin/">{% tr "Open Django Admin" %}</a>
+            {% endif %}
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    {% if model_menu %}
+      {% if show_django_admin_button and all_entities %}
+        <form method="post" action="{% url 'set_admin_entity' %}" class="entity-switch">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <label for="entity_switch">{% tr "Entity Scope" %}</label>
+          <select id="entity_switch" name="entity_id">
+            {% for item in all_entities %}
+              <option value="{{ item.id }}" {% if selected_entity_id == item.id %}selected{% endif %}>{{ item.name }} ({{ item.code }})</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn">{% tr "Apply" %}</button>
+        </form>
+      {% endif %}
+      <input id="homeQuickSearch" class="quick-search" type="text" placeholder="{% tr 'Quick Search' %}">
+      {% if realtime_alert_preview %}
+        <section class="alerts-panel">
+          <div class="alerts-head">
+            <h2 class="alerts-title">{% tr "Realtime Alerts" %}</h2>
+            <span class="alerts-pill">{{ realtime_alert_count }}</span>
+          </div>
+          <div class="alerts-list">
+            {% for a in realtime_alert_preview %}
+              <div class="alert-item">
+                <strong>[{{ a.severity|upper }}]</strong>{{ a.title }} - {{ a.message }}
+              </div>
+            {% endfor %}
+          </div>
+          <a class="alert-link" href="{% url 'realtime_alerts' %}">{% tr "Open Realtime Alerts" %}</a>
+        </section>
+      {% endif %}
+      {% if can_manage_activation_requests and pending_activation_requests_count %}
+        <section class="alerts-panel" style="margin-top:10px;">
+          <div class="alerts-head">
+            <h2 class="alerts-title">{% tr "Activation Requests" %}</h2>
+            <span class="alerts-pill">{{ pending_activation_requests_count|default:0 }}</span>
+          </div>
+          <div class="alerts-list">
+            <div class="alert-item">
+              {% tr "Pending activation approvals require action." %}
+            </div>
+          </div>
+          <a class="alert-link" href="{% url 'activation_requests' %}">{% tr "Open Activation Requests" %}</a>
+        </section>
+      {% endif %}
+      <div class="grid">
+        {% for group in grouped_model_menu %}
+          <section class="group-block">
+            <h2 class="group-title">{{ group.title }}</h2>
+            <div class="group-grid">
+              {% for item in group.items %}
+                <section class="card model-card" data-search="{{ item.name|lower }} {{ item.description|lower }} {{ group.title|lower }}">
+                  <h3 class="name">{{ item.name }}</h3>
+                  <p class="desc">{{ item.description }}</p>
+                  <div class="actions">
+                    <a class="btn primary" href="{{ item.manage_url }}">{% tr "Manage" %}</a>
+                  </div>
+                  {% if not item.registered %}
+                    <div class="status">{% tr "Model is not available in Django admin URLs." %}</div>
+                  {% endif %}
+                </section>
+              {% endfor %}
+            </div>
+          </section>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">{% tr "No admin models available for your permissions." %}</div>
+    {% endif %}
+    <div class="footer">
+      <span style="font-size:0.78rem; color:#64748b; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="34" height="16" viewBox="0 0 68 32" aria-hidden="true" focusable="false">
+          <text x="2" y="18" font-size="15" font-weight="700" font-family="Arial, sans-serif" fill="#111827">aws</text>
+          <path d="M10 23 C24 31, 46 31, 58 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        Powered by AWS | Owned by SWAP KUWAIT
+      </span>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const input = document.getElementById("homeQuickSearch");
+      if (!input) return;
+      const cards = document.querySelectorAll(".model-card");
+      input.addEventListener("input", function () {
+        const q = (input.value || "").trim().toLowerCase();
+        cards.forEach(function (card) {
+          const text = card.dataset.search || "";
+          card.style.display = !q || text.indexOf(q) !== -1 ? "" : "none";
+        });
+      });
+    })();
+    (function () {
+      const notices = document.querySelectorAll("[data-dismissible-notice]");
+      notices.forEach(function (box) {
+        const closeBtn = box.querySelector(".notice-close");
+        if (!closeBtn) return;
+        closeBtn.addEventListener("click", function () {
+          box.style.display = "none";
+        });
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var menus = Array.prototype.slice.call(document.querySelectorAll('details.menu-dd'));
+      if (!menus.length) return;
+
+      document.addEventListener('click', function (event) {
+        menus.forEach(function (menu) {
+          if (!menu.contains(event.target)) {
+            menu.removeAttribute('open');
+          }
+        });
+      });
+
+      menus.forEach(function (menu) {
+        menu.addEventListener('toggle', function () {
+          if (!menu.open) return;
+          menus.forEach(function (other) {
+            if (other !== menu) other.removeAttribute('open');
+          });
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        menus.forEach(function (menu) { menu.removeAttribute('open'); });
+      });
+    })();
+  </script>
+</body>
+</html>

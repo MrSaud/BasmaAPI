@@ -1,0 +1,33 @@
+AWS MySQL & Django App Super Admin 
+root
+Sun!42ZIZO_River#9
+
+Ahmad
+D7$Tx4#Ym
+
+
+source .venv/bin/activate 
+python manage.py runserver  
+
+python manage.py makemigrations
+python manage.py migrate
+
+
+pip freeze > requirements.txt
+
+BeaconSET Plus
+Default Password: minew123
+
+
+Tasks:
+- Start App with /admin-login
+- In Admin-home let alert notification fixed down of screen.
+- in Attendance Transaction page replace Serach Id by Employee no, and filter date from/to, 
+    in select coloumns to hide/show add clear all / select all (make ID Entity Employee Action OccurredAt Location
+ selected by default).
+- in filter for all pages, add filter for each field, and date from/to, always whenever there employee in model let filter by employee name, no,civilid.
+- Important thing, Attendance Transactions and audit allow only super admin to edit or delete.
+- in dashboard (Employee Working Hours (Expected vs Actual)) for all employee with filter search for specific one.
+- in Attendance Exceptions, Repeated Biometric Failures for all employee related to entity? add filter to find employee.
+- Make sure Privileges Matrix is applied for users in all pages.
+- Double check localization.
