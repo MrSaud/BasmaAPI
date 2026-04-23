@@ -80,9 +80,9 @@ DATABASES = {
   "default": {
     "ENGINE": "django.db.backends.mysql",
     "NAME": "attendanceDB",
-    "USER": "root",
-    "PASSWORD": "Sun!42ZIZO_River#9",
-    "HOST": "awseb-e-rpedsqxxev-stack-awsebrdsdatabase-8ztw72uqkfkz.cng0usmsygg8.me-south-1.rds.amazonaws.com",
+    "USER": "remoteuser",
+    "PASSWORD": "StrongPassword",
+    "HOST": "3.67.8.133",
     "PORT": "3306",
     "OPTIONS": {
       "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",

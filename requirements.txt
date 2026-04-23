@@ -1,9 +1,12 @@
 asgiref==3.11.0
-Django==5.0.10
+Django==5.2
 django-cors-headers==4.9.0
 djangorestframework==3.16.1
-mysqlclient==2.2.7
+mysqlclient==2.2.8
+numpy==2.2.6
+opencv-contrib-python-headless==4.11.0.86
 pillow==12.1.0
 requests==2.32.3
+chardet==5.2.0
 reportlab==4.2.5
 sqlparse==0.5.5

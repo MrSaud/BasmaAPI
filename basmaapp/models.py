@@ -36,11 +36,15 @@ class EntitySettings(models.Model):
     number_employees = models.PositiveIntegerField(null=True, blank=True)
     manager_manual_require_biometric = models.BooleanField(default=True)
     manager_manual_require_face_liveness = models.BooleanField(default=True)
+    manager_manual_use_liveness_check = models.BooleanField(default=True)
+    manager_manual_use_face_compare = models.BooleanField(default=True)
     manager_manual_require_photo_base64 = models.BooleanField(default=False)
     manager_manual_single_use_token = models.BooleanField(default=True)
     manager_manual_require_geofence = models.BooleanField(default=True)
     normal_sign_require_biometric = models.BooleanField(default=True)
     normal_sign_require_face_liveness = models.BooleanField(default=True)
+    normal_sign_use_liveness_check = models.BooleanField(default=True)
+    normal_sign_use_face_compare = models.BooleanField(default=True)
     activation_lookup_field = models.CharField(
         max_length=20,
         choices=(

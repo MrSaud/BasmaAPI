@@ -336,6 +336,18 @@
       {% endif %}
 
       <div class="form-grid">
+        {% if model_name == "employee" and is_create_mode %}
+          <div class="field">
+            <label for="employee-create-username">{% tr "Username" %}</label>
+            <input id="employee-create-username" type="text" name="username" value="{{ employee_username_input }}">
+            <div class="help">{% tr "Editable. If left blank, it is auto-generated." %}</div>
+          </div>
+          <div class="field">
+            <label>{% tr "Default Password (Read only)" %}</label>
+            <input type="text" value="{{ employee_default_password }}" readonly>
+            <div class="help">{% tr "Set from employee number. If empty, fallback is 12345678." %}</div>
+          </div>
+        {% endif %}
         {% for field in form %}
           {% if not model_name == "entitysettings" or field.name != "logo64" %}
             <div class="field">

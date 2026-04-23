@@ -32,7 +32,6 @@ from django.db.models import Count, Q, Max, Min, F, Exists, OuterRef, Case, When
 from django.db.models.functions import TruncDate, ExtractHour
 from django.db import transaction
 from .models import AttendanceTransaction, Audit, ManagerQRCodeToken, UserPrivilege  # Import here to avoid circular import
-import requests
 import csv
 import re
 import secrets
@@ -49,6 +48,7 @@ from reportlab.lib.units import mm
 from reportlab.lib import utils
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet
+from .face_detection import run_face_compare, run_liveness_check
 
 
 MANAGER_QR_LIVE_PREFIX = "mgrlive"
@@ -61,48 +61,30 @@ def check_liveness_with_api(photo_base64):
         biometric_error = "liveness: photo_base64 missing"
         return False, biometric_error
 
-    payload = {
-        "image_base64": photo_base64,
-        "threshold": 0.60,  # Adjust threshold (Accuracy) as needed based on your requirements and testing
-        "min_size": 60,
-        "min_neighbors": 5,
-        "pad": 0.15,
-    }
-
-    try:
-        response = requests.post(
-            "http://157.175.170.30/api/liveness/check/",
-            json=payload,
-            headers={"Authorization": "Bearer f9a7c3e2b1d84f0a9e6c5b7a2d1e4c8f"},
-            timeout=300,
-        )
-        if response.status_code != 200:
-            biometric_error = f"liveness: http {response.status_code}"
-            return False, biometric_error
-
-        result = response.json()
-        if not result.get("ok", False):
-            biometric_error = result.get("error") or "liveness: check failed"
-            return False, biometric_error
-
-        if result.get("is_live") is True:
-            return True, ""
-
-        live_score = result.get("live_score")
-        if live_score is not None:
-            biometric_error = f"liveness: failed (score {live_score})"
-        else:
-            biometric_error = "liveness: failed"
+    result = run_liveness_check(
+        image_base64=photo_base64,
+        threshold=0.60,
+        min_size=60,
+        min_neighbors=5,
+        pad=0.15,
+    )
+    if not result.get("ok", False):
+        biometric_error = result.get("error") or "liveness: check failed"
         return False, biometric_error
-    except ValueError:
-        biometric_error = "liveness: invalid response"
-    except requests.RequestException as exc:
-        biometric_error = f"liveness: request failed: {exc.__class__.__name__}"
 
+    if result.get("is_live") is True:
+        return True, ""
+
+    live_score = result.get("live_score")
+    if live_score is not None:
+        biometric_error = f"liveness: failed (score {live_score})"
+    else:
+        biometric_error = "liveness: failed"
     return False, biometric_error
 
 
-def compare_faces_with_api(photo_base64, employee_photo_base64):
+
+def compare_faces_with_api(photo_base64, employee_photo_base64, use_liveness=True, use_compare=True):
     biometric_verify = "FAILED"
     biometric_method = "FACE_COMPARE_API"
     biometric_error = ""
@@ -110,35 +92,24 @@ def compare_faces_with_api(photo_base64, employee_photo_base64):
     if not photo_base64:
         biometric_error = "compare: photo_base64 missing"
         return biometric_verify, biometric_method, biometric_error
-    if not employee_photo_base64:
-        biometric_error = "compare: employee photo_base64 missing"
-        return biometric_verify, biometric_method, biometric_error
 
-    is_live, liveness_error = check_liveness_with_api(photo_base64)
-    if not is_live:
-        return biometric_verify, biometric_method, liveness_error
+    if use_liveness:
+        is_live, liveness_error = check_liveness_with_api(photo_base64)
+        if not is_live:
+            return biometric_verify, biometric_method, liveness_error
 
-    payload = {
-        "image1_base64": photo_base64,
-        "image2_base64": employee_photo_base64,
-        "threshold": 0.35,
-        "min_size": 60,
-        "min_neighbors": 5,
-        "pad": 0.15,
-    }
-
-    try:
-        response = requests.post(
-            "http://157.175.170.30/api/face/compare/",
-            json=payload,
-            headers={"Authorization": "Bearer f9a7c3e2b1d84f0a9e6c5b7a2d1e4c8f"},
-            timeout=300,
-        )
-        if response.status_code != 200:
-            biometric_error = f"compare: http {response.status_code}"
+    if use_compare:
+        if not employee_photo_base64:
+            biometric_error = "compare: employee photo_base64 missing"
             return biometric_verify, biometric_method, biometric_error
-
-        result = response.json()
+        result = run_face_compare(
+            image1_base64=photo_base64,
+            image2_base64=employee_photo_base64,
+            threshold=0.35,
+            min_size=60,
+            min_neighbors=5,
+            pad=0.15,
+        )
         if not result.get("ok", False):
             biometric_error = result.get("error") or "compare: failed"
             return biometric_verify, biometric_method, biometric_error
@@ -152,10 +123,10 @@ def compare_faces_with_api(photo_base64, employee_photo_base64):
                 biometric_error = f"compare: mismatch (similarity {similarity})"
             else:
                 biometric_error = "compare: mismatch"
-    except ValueError:
-        biometric_error = "compare: invalid response"
-    except requests.RequestException as exc:
-        biometric_error = f"compare: request failed: {exc.__class__.__name__}"
+    else:
+        biometric_verify = "PASSED"
+        biometric_error = ""
+        biometric_method = "FACE_LIVENESS_ONLY" if use_liveness else "FACE_CHECK_DISABLED"
 
     return biometric_verify, biometric_method, biometric_error
 
@@ -443,6 +414,29 @@ def _generate_unique_username(base_value):
         counter += 1
         candidate = f"{base}_{counter}"
     return candidate
+
+
+def _build_employee_username(entity, employee_no):
+    entity_code = re.sub(r"[^a-zA-Z0-9_]+", "_", str(getattr(entity, "code", "") or "").strip().lower()).strip("_")
+    employee_code = re.sub(r"[^a-zA-Z0-9_]+", "_", str(employee_no or "").strip().lower()).strip("_")
+    if not entity_code:
+        entity_code = "entity"
+    base = f"{entity_code}_{employee_code}" if employee_code else f"{entity_code}_employee"
+    return _generate_unique_username(base)
+
+
+def _employee_default_password(employee_no):
+    return str(employee_no or "").strip() or "12345678"
+
+
+def _split_full_name(full_name):
+    raw = str(full_name or "").strip()
+    if not raw:
+        return "", ""
+    parts = raw.split()
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], " ".join(parts[1:])
 
 
 def _extract_audit_changes(details):
@@ -4155,7 +4149,16 @@ def model_create_view(request, model_name):
     if str(model_name or "").strip().lower() == "mobileactivationrequest":
         return redirect("activation_requests")
     model = _get_basma_model_or_404(model_name)
-    entity = _get_staff_entity_or_403(request)
+    # Bootstrap path: allow super admin to create the first Entity even when none exists yet.
+    if request.user.is_superuser and model._meta.model_name == "entity":
+        try:
+            entity = _get_staff_entity_or_403(request)
+        except PermissionDenied as exc:
+            if str(exc) != "No entity exists in the system.":
+                raise
+            entity = None
+    else:
+        entity = _get_staff_entity_or_403(request)
     ui_lang = _get_ui_language(request)
     entity_logo_src = _get_entity_logo_src(entity)
     add_prefix = {"en": "Add", "ar": "إضافة", "es": "Agregar"}.get(ui_lang, "Add")
@@ -4163,6 +4166,22 @@ def model_create_view(request, model_name):
     _require_model_privilege_or_403(request, entity, model._meta.model_name, "add")
     form_class = modelform_factory(model, fields="__all__")
     employee_capacity = _get_employee_capacity_state(entity) if model._meta.model_name == "employee" else None
+    employee_no_preview = (
+        (request.POST.get("employee_no") if request.method == "POST" else "") or ""
+    ).strip()
+    employee_default_username = (
+        _build_employee_username(entity, employee_no_preview)
+        if model._meta.model_name == "employee" and entity is not None
+        else ""
+    )
+    employee_username_input = (
+        (request.POST.get("username") if request.method == "POST" else "") or employee_default_username
+    ).strip()
+    employee_default_password = (
+        _employee_default_password(employee_no_preview)
+        if model._meta.model_name == "employee"
+        else ""
+    )
     notify_team_qr_checked = str(request.POST.get("notify_team_qr", "")).strip().lower() in {"1", "true", "on", "yes"}
     notify_team_message = (request.POST.get("notify_team_message") or "").strip()
 
@@ -4176,7 +4195,7 @@ def model_create_view(request, model_name):
         form = form_class(post_data, request.FILES)
         _restrict_form_to_entity(form, entity, actor_user=request.user)
         if model._meta.model_name == "employee":
-            for hidden_field in ("last_updated_UUID_at", "updated_UUID_by"):
+            for hidden_field in ("last_updated_UUID_at", "updated_UUID_by", "user"):
                 if hidden_field in form.fields:
                     form.fields.pop(hidden_field)
         if model._meta.model_name == "managerqrcodetoken" and "token" in form.fields:
@@ -4199,6 +4218,60 @@ def model_create_view(request, model_name):
             )
         if form.is_valid() and not over_capacity and request.POST.get("confirm_changes") == "1":
             instance = form.save(commit=False)
+            if model._meta.model_name == "employee":
+                # Enforce tenant boundary: employee is always created in current admin entity.
+                instance.entity = entity
+                employee_no_value = str(form.cleaned_data.get("employee_no") or "").strip()
+                full_name_value = str(form.cleaned_data.get("full_name") or "").strip()
+                user_first_name, user_last_name = _split_full_name(full_name_value)
+                username_value = (request.POST.get("username") or "").strip()
+                if not username_value:
+                    username_value = _build_employee_username(entity, employee_no_value)
+                if User.objects.filter(username=username_value).exists():
+                    form.add_error(None, f"Username '{username_value}' already exists.")
+                    _safe_audit_log(
+                        request,
+                        entity,
+                        page="model_create",
+                        action="CREATE_FAILED",
+                        model_name=model._meta.model_name,
+                        details=f"username_exists={username_value}",
+                    )
+                    return render(
+                        request,
+                        "basmaapp/model_form.html",
+                        {
+                            "form": form,
+                            "model": model,
+                            "model_name": model._meta.model_name,
+                            "app_label": model._meta.app_label,
+                            "model_title": model._meta.verbose_name.title(),
+                            "page_title": f"{add_prefix} {model._meta.verbose_name.title()}",
+                            "submit_label": create_label,
+                            "show_change_summary": False,
+                            "change_summary_items": [],
+                            "footer_entity_name": entity.name if entity else "System",
+                            "footer_user_name": _get_footer_user_name(request),
+                            "employee_capacity": employee_capacity,
+                            "ui_lang": ui_lang,
+                            "header_logo_src": entity_logo_src,
+                            "is_create_mode": True,
+                            "notify_team_qr_checked": notify_team_qr_checked,
+                            "notify_team_message": notify_team_message,
+                            "employee_default_username": employee_default_username,
+                            "employee_username_input": username_value,
+                            "employee_default_password": employee_default_password,
+                        },
+                    )
+                user = User(
+                    username=username_value,
+                    first_name=user_first_name,
+                    last_name=user_last_name,
+                    is_active=True,
+                )
+                user.set_password(_employee_default_password(employee_no_value))
+                user.save()
+                instance.user = user
             if model._meta.model_name == "managerqrcodetoken" and not getattr(instance, "token", ""):
                 instance.token = secrets.token_urlsafe(32)
             if model._meta.model_name == "managerqrcodetoken":
@@ -4245,7 +4318,7 @@ def model_create_view(request, model_name):
         form = form_class()
         _restrict_form_to_entity(form, entity, actor_user=request.user)
         if model._meta.model_name == "employee":
-            for hidden_field in ("last_updated_UUID_at", "updated_UUID_by"):
+            for hidden_field in ("last_updated_UUID_at", "updated_UUID_by", "user"):
                 if hidden_field in form.fields:
                     form.fields.pop(hidden_field)
         if model._meta.model_name == "managerqrcodetoken" and "token" in form.fields:
@@ -4311,7 +4384,7 @@ def model_create_view(request, model_name):
                 }
                 for name in form.cleaned_data.keys()
             ] if request.method == "POST" and form.is_valid() and request.POST.get("confirm_changes") != "1" else [],
-            "footer_entity_name": entity.name,
+            "footer_entity_name": entity.name if entity else "System",
             "footer_user_name": _get_footer_user_name(request),
             "employee_capacity": employee_capacity,
             "ui_lang": ui_lang,
@@ -4319,6 +4392,9 @@ def model_create_view(request, model_name):
             "is_create_mode": True,
             "notify_team_qr_checked": notify_team_qr_checked,
             "notify_team_message": notify_team_message,
+            "employee_default_username": employee_default_username,
+            "employee_username_input": employee_username_input,
+            "employee_default_password": employee_default_password,
         },
     )
 
@@ -5376,6 +5452,8 @@ def _manager_manual_signing_policy(entity, qr_token=None):
         settings_obj = EntitySettings.objects.filter(entity=entity).only(
             "manager_manual_require_biometric",
             "manager_manual_require_face_liveness",
+            "manager_manual_use_liveness_check",
+            "manager_manual_use_face_compare",
             "manager_manual_require_photo_base64",
             "manager_manual_single_use_token",
             "manager_manual_require_geofence",
@@ -5387,6 +5465,14 @@ def _manager_manual_signing_policy(entity, qr_token=None):
         ),
         "require_face_liveness": bool(
             getattr(settings_obj, "manager_manual_require_face_liveness", True)
+            if settings_obj is not None else True
+        ),
+        "use_liveness_check": bool(
+            getattr(settings_obj, "manager_manual_use_liveness_check", True)
+            if settings_obj is not None else True
+        ),
+        "use_face_compare": bool(
+            getattr(settings_obj, "manager_manual_use_face_compare", True)
             if settings_obj is not None else True
         ),
         "require_photo_base64": bool(
@@ -5417,6 +5503,8 @@ def _normal_signing_policy(entity):
         settings_obj = EntitySettings.objects.filter(entity=entity).only(
             "normal_sign_require_biometric",
             "normal_sign_require_face_liveness",
+            "normal_sign_use_liveness_check",
+            "normal_sign_use_face_compare",
         ).first()
     return {
         "require_biometric": bool(
@@ -5425,6 +5513,14 @@ def _normal_signing_policy(entity):
         ),
         "require_face_liveness": bool(
             getattr(settings_obj, "normal_sign_require_face_liveness", True)
+            if settings_obj is not None else True
+        ),
+        "use_liveness_check": bool(
+            getattr(settings_obj, "normal_sign_use_liveness_check", True)
+            if settings_obj is not None else True
+        ),
+        "use_face_compare": bool(
+            getattr(settings_obj, "normal_sign_use_face_compare", True)
             if settings_obj is not None else True
         ),
     }
@@ -5687,12 +5783,17 @@ def post_attendance_transaction_by_manager_qr(request):
             if policy["require_biometric"] and not biometric_verified_client:
                 biometric_client_error = "Biometric verification failed on device"
 
-            if policy["require_face_liveness"]:
+            if policy["require_face_liveness"] and (
+                policy.get("use_liveness_check", True) or policy.get("use_face_compare", True)
+            ):
                 if not photo_base64:
                     return JsonResponse({"error": "Face capture is required"}, status=400)
                 employee_photo_base64 = employee.photo_base64 or ""
                 biometric_verify, biometric_method, biometric_error = compare_faces_with_api(
-                    photo_base64, employee_photo_base64
+                    photo_base64,
+                    employee_photo_base64,
+                    use_liveness=policy.get("use_liveness_check", True),
+                    use_compare=policy.get("use_face_compare", True),
                 )
                 if biometric_verify != "PASSED":
                     biometric_verify = "PENDING"
@@ -5816,12 +5917,17 @@ def post_employee_attendance_transactions(request):
         if normal_policy["require_biometric"] and not biometric_verified_client:
             biometric_client_error = "Biometric verification failed on device"
 
-        if normal_policy["require_face_liveness"]:
+        if normal_policy["require_face_liveness"] and (
+            normal_policy.get("use_liveness_check", True) or normal_policy.get("use_face_compare", True)
+        ):
             if not photo_base64:
                 return JsonResponse({"error": "Face capture is required"}, status=400)
             employee_photo_base64 = employee.photo_base64 or ""
             biometric_verify, biometric_method, biometric_error = compare_faces_with_api(
-                photo_base64, employee_photo_base64
+                photo_base64,
+                employee_photo_base64,
+                use_liveness=normal_policy.get("use_liveness_check", True),
+                use_compare=normal_policy.get("use_face_compare", True),
             )
             if biometric_verify != "PASSED":
                 biometric_verify = "PENDING"
