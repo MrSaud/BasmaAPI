@@ -368,3 +368,33 @@ class Audit(models.Model):
 
     def __str__(self):
         return f"{self.created_at} {self.action} by {self.user_id or 'N/A'}"
+
+
+class AppGlobalSettings(models.Model):
+    """
+    Singleton row (pk=1): deployment-wide toggles (e.g. App Store review mode).
+    """
+
+    store_review_mode = models.BooleanField(
+        default=False,
+        help_text="When enabled, verify-uuid skips UUID matching and returns the Employee linked to Django User id=1.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "App global settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "App global settings"

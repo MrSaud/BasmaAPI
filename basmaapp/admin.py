@@ -3,7 +3,7 @@ import secrets
 from django.apps import apps
 from django.contrib import admin
 
-from .models import ManagerQRCodeToken
+from .models import AppGlobalSettings, ManagerQRCodeToken
 
 
 @admin.register(ManagerQRCodeToken)
@@ -45,8 +45,29 @@ class ManagerQRCodeTokenAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+@admin.register(AppGlobalSettings)
+class AppGlobalSettingsAdmin(admin.ModelAdmin):
+    list_display = ("store_review_mode", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    def has_module_permission(self, request):
+        return bool(request.user and request.user.is_superuser)
+
+    def has_view_permission(self, request, obj=None):
+        return bool(request.user and request.user.is_superuser)
+
+    def has_add_permission(self, request):
+        return bool(request.user and request.user.is_superuser)
+
+    def has_change_permission(self, request, obj=None):
+        return bool(request.user and request.user.is_superuser)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 for model in apps.get_app_config("basmaapp").get_models():
-    if model is ManagerQRCodeToken:
+    if model in (ManagerQRCodeToken, AppGlobalSettings):
         continue
     try:
         admin.site.register(model)

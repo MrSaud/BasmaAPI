@@ -1,0 +1,58 @@
+{% load localize %}
+<nav class="admin-sidebar" aria-label="{% tr 'Main navigation' %}">
+  <div class="admin-sidebar-inner">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">{% tr "Overview" %}</div>
+      <div class="sidebar-nav-stack">
+        <a class="sidebar-link" href="{% url 'admin_home' %}"><span class="sidebar-link-text">{% tr "Home" %}</span></a>
+        <a class="sidebar-link" href="{% url 'admin_dashboard' %}"><span class="sidebar-link-text">{% tr "Dashboard" %}</span></a>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">{% tr "Workspace" %}</div>
+      <div class="sidebar-nav-stack">
+        {% if can_view_exceptions %}
+          <a class="sidebar-link" href="{% url 'attendance_exceptions' %}"><span class="sidebar-link-text">{% tr "Attendance Exceptions" %}</span></a>
+        {% endif %}
+        {% if can_view_audit_insights %}
+          <a class="sidebar-link" href="{% url 'audit_insights' %}"><span class="sidebar-link-text">{% tr "Audit Insights" %}</span></a>
+        {% endif %}
+        {% if can_manage_privileges %}
+          <a class="sidebar-link" href="{% url 'privilege_matrix' %}"><span class="sidebar-link-text">{% tr "Privileges Matrix" %}</span></a>
+        {% endif %}
+        {% if can_view_realtime_alerts %}
+          <a class="sidebar-link" href="{% url 'realtime_alerts' %}">
+            <span class="sidebar-link-text">{% tr "Realtime Alerts" %}</span>
+            {% if realtime_alert_count %}<span class="sidebar-badge">{{ realtime_alert_count }}</span>{% endif %}
+          </a>
+        {% endif %}
+        {% if can_manage_activation_requests %}
+          <a class="sidebar-link" href="{% url 'activation_requests' %}">
+            <span class="sidebar-link-text">{% tr "Activation Requests" %}</span>
+            {% if pending_activation_requests_count %}<span class="sidebar-badge">{{ pending_activation_requests_count }}</span>{% endif %}
+          </a>
+        {% endif %}
+        {% if can_import_data %}
+          <a class="sidebar-link" href="{% url 'data_import' %}"><span class="sidebar-link-text">{% tr "Import CSV" %}</span></a>
+        {% endif %}
+        {% if can_manage_user_accounts %}
+          <a class="sidebar-link" href="{% url 'super_admin_user_accounts' %}"><span class="sidebar-link-text">User Accounts</span></a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">{% tr "Reports" %}</div>
+      <div class="sidebar-nav-stack">
+        <a class="sidebar-link" href="{% url 'reports_home' %}"><span class="sidebar-link-text">{% tr "Reports" %}</span></a>
+      </div>
+    </div>
+    <div class="sidebar-section sidebar-section--footer">
+      <div class="sidebar-nav-stack">
+        <a class="sidebar-link sidebar-link--danger" href="{% url 'admin_logout' %}"><span class="sidebar-link-text">{% tr "Logout" %}</span></a>
+        {% if show_django_admin_button %}
+          <a class="sidebar-link sidebar-link--accent" href="/admin/"><span class="sidebar-link-text">{% tr "Open Django Admin" %}</span></a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>

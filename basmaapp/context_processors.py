@@ -127,3 +127,21 @@ def admin_theme(request):
         "admin_entity_initials": _build_initials(entity_display_name),
         "admin_font_family": font_family,
     }
+
+
+def admin_sidebar_navigation(request):
+    """Inject standard sidebar nav flags for staff HTML pages (templates use {% include %} nav)."""
+    from django.core.exceptions import PermissionDenied
+
+    user = getattr(request, "user", None)
+    if not user or not user.is_authenticated or not getattr(user, "is_staff", False):
+        return {}
+
+    try:
+        from .views import _get_staff_entity_or_403, build_admin_sidebar_context
+
+        entity = _get_staff_entity_or_403(request)
+    except PermissionDenied:
+        return {}
+
+    return build_admin_sidebar_context(request, entity)

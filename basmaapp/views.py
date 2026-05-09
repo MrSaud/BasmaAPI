@@ -21,7 +21,7 @@ from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 import json
 import uuid
-from .models import Employee, EmployeeLocationAssignment, Entity, EntitySettings, InboxMessage, Location, MobileActivationRequest
+from .models import AppGlobalSettings, Employee, EmployeeLocationAssignment, Entity, EntitySettings, InboxMessage, Location, MobileActivationRequest
 from .serializers import UpdateEmployeeUUIDSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -3036,6 +3036,26 @@ def _get_staff_entity_or_403(request):
     return entity
 
 
+def build_admin_sidebar_context(request, entity):
+    """Privilege flags and counts for the standard admin sidebar (shared nav partial)."""
+    realtime_alerts = _build_realtime_alerts(entity)
+    return {
+        "show_django_admin_button": request.user.is_superuser,
+        "can_view_exceptions": _check_model_privilege(request, entity, "attendancetransaction", "read"),
+        "can_view_audit_insights": _check_model_privilege(request, entity, "audit", "read"),
+        "can_manage_privileges": _check_model_privilege(request, entity, "userprivilege", "read"),
+        "can_view_realtime_alerts": _check_model_privilege(request, entity, "attendancetransaction", "read"),
+        "can_manage_activation_requests": _check_model_privilege(request, entity, "employee", "edit"),
+        "can_import_data": (
+            _check_model_privilege(request, entity, "employee", "add")
+            or _check_model_privilege(request, entity, "location", "add")
+        ),
+        "can_manage_user_accounts": request.user.is_superuser,
+        "realtime_alert_count": len(realtime_alerts),
+        "pending_activation_requests_count": _pending_activation_requests_count(entity),
+    }
+
+
 def _get_employee_by_user_id_with_license_check(employee_id):
     employee_id_raw = str(employee_id).strip()
     if not employee_id_raw.isdigit():
@@ -4652,13 +4672,46 @@ class VerifyEmployeeUUIDView(APIView):
 
     def post(self, request):
         try:
-            body = request.data
-           
-            employee_uuid = body.get("employee_uuid")
-            
+            body = request.data or {}
 
-            employee = Employee.objects.select_related("user").get(
-            employee_uuid=employee_uuid,
+            if AppGlobalSettings.get_solo().store_review_mode:
+                employee = (
+                    Employee.objects.select_related("user", "entity")
+                    .filter(user_id=1, is_active=True)
+                    .first()
+                )
+                if employee is None:
+                    return Response(
+                        {
+                            "error": "Store review mode is enabled but there is no active Employee for Django User id=1.",
+                        },
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
+                _sync_entity_active_by_license(employee.entity)
+                if _is_entity_license_expired(employee.entity):
+                    return Response(
+                        {"error": _get_entity_license_error_message(employee.entity)},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                return Response(
+                    {
+                        "message": "UUIDs match",
+                        "user_id": employee.id,
+                        "employee_uuid": str(employee.employee_uuid),
+                        "store_review_mode": True,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            employee_uuid = body.get("employee_uuid")
+            if not employee_uuid:
+                return Response(
+                    {"error": "employee_uuid is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            employee = Employee.objects.select_related("user", "entity").get(
+                employee_uuid=employee_uuid,
                 is_active=True,
             )
             _sync_entity_active_by_license(employee.entity)
@@ -4668,10 +4721,7 @@ class VerifyEmployeeUUIDView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-            if (
-                str(employee.employee_uuid) == employee_uuid
-               
-            ):
+            if str(employee.employee_uuid) == employee_uuid:
                 return Response(
                     {
                         "message": "UUIDs match",
@@ -4679,11 +4729,10 @@ class VerifyEmployeeUUIDView(APIView):
                     },
                     status=status.HTTP_200_OK,
                 )
-            else:
-                return Response(
-                    {"error": "UUIDs do not match"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            return Response(
+                {"error": "UUIDs do not match"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         except Employee.DoesNotExist:
             return Response(
@@ -4695,6 +4744,50 @@ class VerifyEmployeeUUIDView(APIView):
                 {"error": str(exc) or "Entity license is not valid."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+
+
+class SuperAdminAppGlobalSettingsView(APIView):
+    """
+    GET/PATCH deployment-wide app flags. Django superuser only (session or token).
+    """
+
+    def get(self, request):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+        solo = AppGlobalSettings.get_solo()
+        return Response(
+            {
+                "store_review_mode": solo.store_review_mode,
+                "updated_at": solo.updated_at.isoformat() if solo.updated_at else None,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def patch(self, request):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+        body = request.data or {}
+        if "store_review_mode" not in body:
+            return Response(
+                {"error": "store_review_mode is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        val = body.get("store_review_mode")
+        if not isinstance(val, bool):
+            return Response(
+                {"error": "store_review_mode must be a boolean"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        solo = AppGlobalSettings.get_solo()
+        solo.store_review_mode = val
+        solo.save()
+        return Response(
+            {
+                "store_review_mode": solo.store_review_mode,
+                "updated_at": solo.updated_at.isoformat() if solo.updated_at else None,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class CheckEmployeeLicenseView(APIView):

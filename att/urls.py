@@ -13,8 +13,13 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from functools import partial
+
 from django.contrib import admin
-from django.urls import path, include
+from django.contrib.staticfiles.views import serve as staticfiles_serve
+from django.urls import include, path, re_path
+from django.views.decorators.http import require_GET
+
 from basmaapp import views as basma_views
 
 urlpatterns = [
@@ -81,6 +86,15 @@ urlpatterns = [
     path("admin-home/models/<str:model_name>/<int:pk>/edit/", basma_views.model_edit_view, name="model_edit"),
     path('admin/', admin.site.urls),
     path("api/", include("basmaapp.urls")),
+]
+
+# Explicit /static/ routing via staticfiles finders (basmaapp/static/..., django admin assets, etc.).
+# Ensures CSS/JS load when DEBUG is False or when the dev server does not inject static handling.
+urlpatterns += [
+    re_path(
+        r"^static/(?P<path>.*)$",
+        require_GET(partial(staticfiles_serve, insecure=True)),
+    ),
 ]
 
 handler400 = "basmaapp.views.custom_400"

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -23,9 +24,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-$k#_7@i#o1ifz$dtzn%e72k7jvkd0wrp%*%l^4g2=qjs@m97!8'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Unset defaults to True so local runserver serves {% static %} files (CSS/JS). For deployment, set DJANGO_DEBUG=false.
+DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in {"1", "true", "yes", "on"}
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
 
 
 # Application definition
@@ -65,6 +71,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'basmaapp.context_processors.admin_theme',
+                'basmaapp.context_processors.admin_sidebar_navigation',
             ],
         },
     },

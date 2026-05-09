@@ -23,11 +23,6 @@
       color: var(--text);
       background: linear-gradient(130deg, #eef2f6, #e0f2fe 50%, #f1f5f9);
     }
-    .wrap {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 24px 16px 36px;
-    }
     .top {
       display: flex;
       justify-content: space-between;
@@ -64,28 +59,6 @@
     .menu-dd { position: relative; }
     .menu-dd > summary { list-style: none; }
     .menu-dd > summary::-webkit-details-marker { display: none; }
-    .menu-list { display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:190px; background:#fff; border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 20px rgba(15,23,42,.12); padding:6px; z-index:25; flex-direction:column; gap:6px; }
-    .menu-dd[open] .menu-list { display:flex; }
-    .menu-list .btn { width:100%; justify-content:flex-start; }
-    .side-menu-panel .menu-list {
-      display: flex;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: min(280px, 80vw);
-      height: 100vh;
-      max-height: 100vh;
-      padding: 56px 12px 12px;
-      border-radius: 0;
-      border-right: 1px solid var(--border);
-      border-left: 0;
-      border-top: 0;
-      box-shadow: 16px 0 32px rgba(15, 23, 42, 0.18);
-      background: #ffffff;
-      overflow-y: auto;
-      z-index: 30;
-    }
-    .wrap { padding-left: 300px; max-width: none; width: 100%; margin: 0; }
     .btn {
       text-decoration: none;
       display: inline-flex;
@@ -158,16 +131,6 @@
       background: #fff;
       color: var(--text);
     }
-    .select-search {
-      margin-bottom: 6px;
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-size: 0.82rem;
-      background: #fff;
-      color: var(--text);
-    }
     .footer {
       margin-top: 14px;
       text-align: center;
@@ -175,11 +138,10 @@
       font-size: 0.84rem;
     }
   </style>
-  
-  <script src="{% static 'basmaapp/admin-modern.js' %}" defer></script>
+  {% include "basmaapp/includes/admin_shell_assets.html" %}
 </head>
 <body>
-  <div class="wrap">
+  <div class="wrap wrap--sidebar-offset">
     <div class="top">
       <div class="title-wrap">
         {% if header_logo_src %}
@@ -199,24 +161,24 @@
         <button class="btn" onclick="history.length > 1 ? history.back() : window.location='/admin-home/';" type="button">{% tr "Back" %}</button>
         <details class="menu-dd">
           <summary class="btn">{% tr "Language" %}</summary>
-          <div class="menu-list">
+          <div class="lang-dropdown-menu">
             <a class="btn" href="{% url 'set_ui_language' %}?lang=ar&next={{ request.get_full_path|urlencode }}">🇰🇼 Arabic</a>
             <a class="btn" href="{% url 'set_ui_language' %}?lang=en&next={{ request.get_full_path|urlencode }}">🇺🇸 English</a>
             <a class="btn" href="{% url 'set_ui_language' %}?lang=es&next={{ request.get_full_path|urlencode }}">🇪🇸 Espanol</a>
           </div>
         </details>
-        <nav class="side-menu-panel">
-          <div class="menu-list">
-            <a class="btn" href="{% url 'admin_home' %}">{% tr "Home" %}</a>
-            <a class="btn" href="{% url 'admin_dashboard' %}">{% tr "Dashboard" %}</a>
-            <a class="btn" href="{% url 'reports_home' %}?preset_action=save&{{ request.GET.urlencode }}">{% tr "Save Filters" %}</a>
-            {% if saved_filters_available %}
-              <a class="btn" href="{% url 'reports_home' %}?preset_action=load">{% tr "Load Saved Filters" %}</a>
-            {% endif %}
-            <a class="btn" href="{% url 'reports_home' %}?preset_action=clear">{% tr "Clear Saved Filters" %}</a>
-            <a class="btn" style="background:#dc2626; border-color:#dc2626; color:#fff;" href="{% url 'admin_logout' %}">{% tr "Logout" %}</a>
-          </div>
-        </nav>
+        {% include "basmaapp/includes/admin_sidebar_nav.html" %}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <span style="color:var(--muted); font-size:0.88rem; font-weight:600;">{% tr "Filter presets" %}</span>
+        <a class="btn" href="{% url 'reports_home' %}?preset_action=save&{{ request.GET.urlencode }}">{% tr "Save Filters" %}</a>
+        {% if saved_filters_available %}
+          <a class="btn" href="{% url 'reports_home' %}?preset_action=load">{% tr "Load Saved Filters" %}</a>
+        {% endif %}
+        <a class="btn" href="{% url 'reports_home' %}?preset_action=clear">{% tr "Clear Saved Filters" %}</a>
       </div>
     </div>
 
@@ -363,54 +325,6 @@
       </span>
     </div>
   </div>
-  <script>
-    (function () {
-      function addSearchToSelect(selectEl, placeholder) {
-        var options = Array.from(selectEl.options).map(function (opt) {
-          return { value: opt.value, text: opt.text };
-        });
-        var search = document.createElement("input");
-        search.type = "text";
-        search.className = "select-search";
-        search.placeholder = placeholder || "{% tr 'Search...' %}";
-        search.autocomplete = "off";
-
-        search.addEventListener("input", function () {
-          var q = (search.value || "").trim().toLowerCase();
-          var current = selectEl.value;
-          selectEl.innerHTML = "";
-          var hasCurrent = false;
-
-          options.forEach(function (item) {
-            var txt = (item.text || "").toLowerCase();
-            var isEmpty = !item.value;
-            if (!isEmpty && q && txt.indexOf(q) === -1) return;
-            var option = document.createElement("option");
-            option.value = item.value;
-            option.text = item.text;
-            if (item.value === current) {
-              option.selected = true;
-              hasCurrent = true;
-            }
-            selectEl.appendChild(option);
-          });
-
-          if (!hasCurrent && current) selectEl.value = "";
-        });
-
-        selectEl.parentNode.insertBefore(search, selectEl);
-      }
-
-      var form = document.getElementById("ela-report-form");
-      if (!form) return;
-
-      var employeeSelect = form.querySelector("select[name='employee_id']");
-      var locationSelect = form.querySelector("select[name='location_id']");
-      if (employeeSelect) addSearchToSelect(employeeSelect, "Search employee...");
-      if (locationSelect) addSearchToSelect(locationSelect, "Search location...");
-    })();
-  </script>
-
   <script>
     (function () {
       var menus = Array.prototype.slice.call(document.querySelectorAll('details.menu-dd'));

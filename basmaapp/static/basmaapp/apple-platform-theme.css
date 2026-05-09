@@ -1,0 +1,607 @@
+/**
+ * Apple-platform inspired shell (typography, materials, spacing).
+ * Load after inline page styles + admin-sidebar.css. Entity --brand is preserved.
+ */
+
+:root {
+  --apple-font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", system-ui, "Helvetica Neue", sans-serif;
+  --apple-bg-grouped: #f2f2f7;
+  --apple-bg-elevated: #ffffff;
+  --apple-label-primary: #1d1d1f;
+  --apple-label-secondary: rgba(60, 60, 67, 0.6);
+  --apple-separator: rgba(60, 60, 67, 0.18);
+  --apple-separator-light: rgba(60, 60, 67, 0.1);
+  --apple-radius-card: 12px;
+  --apple-radius-control: 10px;
+  --apple-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --apple-shadow-float: 0 8px 28px rgba(0, 0, 0, 0.1);
+  --text: var(--apple-label-primary);
+  --muted: var(--apple-label-secondary);
+  --panel: var(--apple-bg-elevated);
+  --border: #d1d1d6;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--apple-font-stack);
+  background: var(--apple-bg-grouped);
+  background-image: none;
+  color: var(--apple-label-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.022em;
+  font-weight: 700;
+}
+
+.sub {
+  color: var(--apple-label-secondary);
+}
+
+/* Cards / panels / grouped content */
+.card,
+.panel,
+.group-block,
+.table-wrap,
+.entity-switch,
+.quick-search,
+.filters-shell .filters,
+.alerts-panel,
+.notice,
+.license-notice,
+.empty,
+.chip {
+  border-radius: var(--apple-radius-card);
+}
+
+.card,
+.panel,
+.group-block,
+.table-wrap,
+.filters-shell .filters {
+  border-color: var(--apple-separator-light);
+  box-shadow: var(--apple-shadow-card);
+  background: var(--apple-bg-elevated);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  font-family: inherit;
+  border-radius: var(--apple-radius-control);
+}
+
+/* Tables */
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+th {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Admin UI surfaces — buttons, containers, tables (all staff pages + error sheets)
+   Loaded after page `<style>` so these rules unify look across templates.
+   Uses --brand from entity inline :root when present.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Buttons (links + native controls) ─────────────────────────────────── */
+a.btn,
+button.btn,
+.btn {
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  min-height: 34px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid rgba(60, 60, 67, 0.16);
+  border-radius: var(--apple-radius-control);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text, var(--apple-label-primary));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease;
+}
+
+a.btn:active,
+button.btn:active,
+.btn:active {
+  transform: scale(0.98);
+}
+
+a.btn:hover,
+button.btn:hover,
+.btn:hover {
+  background: #ffffff;
+  border-color: rgba(60, 60, 67, 0.26);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.btn.primary,
+.btn.btn-primary {
+  background: var(--brand, #0284c7);
+  border-color: color-mix(in srgb, var(--brand, #0284c7) 82%, #000);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.btn.primary:hover,
+.btn.btn-primary:hover {
+  filter: brightness(1.06);
+  border-color: color-mix(in srgb, var(--brand, #0284c7) 65%, #000);
+}
+
+.btn.back,
+button.btn.back {
+  border-radius: 999px;
+}
+
+/* Destructive / logout-style actions */
+.btn.btn-danger,
+a.btn.btn-danger {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(220, 38, 38, 0.35);
+  color: #b91c1c;
+}
+
+.btn.btn-danger:hover,
+a.btn.btn-danger:hover {
+  background: rgba(254, 242, 242, 0.95);
+  border-color: rgba(220, 38, 38, 0.5);
+}
+
+button.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Sidebar language summary stays owned by admin-sidebar.css (more specific). */
+
+/* ── Panels, cards, grouped blocks ───────────────────────────────────────── */
+.panel,
+.card:not(main.card),
+.section,
+.chart-card,
+.filters-shell .filters,
+.entity-switch,
+.quick-search,
+.alerts-panel,
+.grid .card,
+.cards .card {
+  border: 1px solid var(--apple-separator-light);
+  background: var(--apple-bg-elevated);
+  box-shadow: var(--apple-shadow-card);
+  border-radius: var(--apple-radius-card);
+}
+
+.panel,
+.section,
+.chart-card,
+.filters-shell .filters,
+.entity-switch,
+.quick-search,
+.alerts-panel {
+  padding: 14px 16px;
+}
+
+.grid .card,
+.cards .card {
+  padding: 14px;
+}
+
+.chart-card,
+.filters-shell .filters {
+  padding: 14px;
+}
+
+.section-title,
+.chart-title,
+.filters-title {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text, var(--apple-label-primary));
+}
+
+.notice,
+.license-notice,
+.empty,
+.summary,
+.errors {
+  border-radius: var(--apple-radius-card);
+  border: 1px solid var(--apple-separator-light);
+}
+
+.ok,
+.err,
+.error {
+  border-radius: var(--apple-radius-control);
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.ok {
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: rgba(240, 253, 244, 0.95);
+  color: #166534;
+}
+
+.err,
+.error {
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  background: rgba(254, 242, 242, 0.95);
+  color: #991b1b;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--apple-separator-light);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Tables ───────────────────────────────────────────────────────────── */
+.table-wrap {
+  border: 1px solid var(--apple-separator-light);
+  background: var(--apple-bg-elevated);
+  border-radius: var(--apple-radius-card);
+  box-shadow: var(--apple-shadow-card);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap table,
+.panel table,
+.card table,
+.section table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.table-wrap th,
+.panel th,
+.card th,
+.section th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: var(--text, var(--apple-label-primary));
+  background: rgba(60, 60, 67, 0.06);
+  border-bottom: 1px solid var(--apple-separator-light);
+}
+
+.table-wrap td,
+.panel td,
+.card td,
+.section td {
+  padding: 10px 12px;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(60, 60, 67, 0.08);
+  color: var(--text, var(--apple-label-primary));
+}
+
+.table-wrap tbody tr:hover td,
+.panel tbody tr:hover td,
+.card tbody tr:hover td {
+  background: rgba(60, 60, 67, 0.03);
+}
+
+.table-wrap tr:last-child td,
+.panel tr:last-child td,
+.card tr:last-child td {
+  border-bottom: none;
+}
+
+[dir="rtl"] .table-wrap th,
+[dir="rtl"] .panel th,
+[dir="rtl"] .card th {
+  text-align: right;
+}
+
+[dir="rtl"] .table-wrap td,
+[dir="rtl"] .panel td,
+[dir="rtl"] .card td {
+  text-align: right;
+}
+
+/* ── Page chrome ─────────────────────────────────────────────────────────── */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Filter rows: horizontal flow (templates use grid; do not override with generic flex on .filters) */
+.filter-bar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: flex-end;
+}
+
+.filter-bar > .filter-field {
+  flex: 1 1 220px;
+  min-width: min(200px, 100%);
+  max-width: min(360px, 100%);
+  box-sizing: border-box;
+}
+
+/* Panel forms: responsive horizontal columns */
+form.panel > .filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px 12px;
+  align-items: end;
+}
+
+/* Reports / cards: filter strip inside each section */
+.card form > .filters,
+section.card form > .filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px 10px;
+  align-items: end;
+}
+
+/* Model records: stack header + grid body (avoid flex on outer .filters breaking layout) */
+.filters-shell > .filters {
+  display: block;
+}
+
+.filters-shell .filters-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px 12px;
+  align-items: end;
+}
+
+.filters-shell .filters-head {
+  margin-bottom: 10px;
+}
+
+.field label,
+.filter-field label {
+  color: var(--muted, var(--apple-label-secondary));
+}
+
+/* Searchable combobox: one visible control; filter lives inside open panel only (admin-modern.js) */
+.select-combobox {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+select.select-combobox-native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+}
+
+.select-combobox-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 11px;
+  min-height: 38px;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid rgba(60, 60, 67, 0.14);
+  border-radius: var(--apple-radius-control);
+  background: #fff;
+  color: var(--text, var(--apple-label-primary));
+  box-sizing: border-box;
+}
+
+.select-combobox-trigger::after {
+  content: "";
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid rgba(60, 60, 67, 0.45);
+}
+
+.select-combobox-trigger:hover {
+  border-color: rgba(60, 60, 67, 0.22);
+}
+
+.select-combobox-trigger:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--brand, #0284c7) 50%, rgba(60, 60, 67, 0.25));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #0284c7) 20%, transparent);
+}
+
+.select-combobox-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  max-height: min(320px, 55vh);
+  border: 1px solid rgba(60, 60, 67, 0.14);
+  border-radius: var(--apple-radius-card);
+  background: var(--apple-bg-elevated);
+  box-shadow: var(--apple-shadow-float);
+  overflow: hidden;
+}
+
+.select-combobox-search {
+  flex-shrink: 0;
+  border: none !important;
+  border-bottom: 1px solid rgba(60, 60, 67, 0.1) !important;
+  border-radius: 0 !important;
+  padding: 8px 11px !important;
+  margin: 0 !important;
+  font-size: 0.875rem;
+  box-shadow: none !important;
+}
+
+.select-combobox-search:focus {
+  outline: none;
+}
+
+.select-combobox-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.select-combobox-option {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text, var(--apple-label-primary));
+}
+
+.select-combobox-option:hover,
+.select-combobox-option:focus {
+  background: rgba(60, 60, 67, 0.06);
+  outline: none;
+}
+
+.select-combobox-option.is-selected {
+  background: color-mix(in srgb, var(--brand, #0284c7) 14%, transparent);
+  font-weight: 600;
+}
+
+.select-combobox-option--disabled {
+  padding: 8px 10px;
+  font-size: 0.875rem;
+  color: rgba(60, 60, 67, 0.35);
+  cursor: default;
+}
+
+[dir="rtl"] .select-combobox-trigger {
+  text-align: right;
+}
+
+/* Form controls inside admin pages */
+.wrap input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
+.wrap select,
+.wrap textarea {
+  border: 1px solid rgba(60, 60, 67, 0.14);
+  padding: 8px 11px;
+  font-size: 0.875rem;
+  background: #fff;
+  color: var(--text, var(--apple-label-primary));
+}
+
+.wrap input:focus,
+.wrap select:focus,
+.wrap textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--brand, #0284c7) 50%, rgba(60, 60, 67, 0.25));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #0284c7) 20%, transparent);
+}
+
+/* Centered sheets (HTTP error pages — class="wrap" without sidebar offset) */
+body .wrap:not(.wrap--sidebar-offset) {
+  max-width: min(760px, 92vw);
+  margin: clamp(40px, 10vh, 100px) auto;
+  padding: 26px 28px;
+  background: var(--apple-bg-elevated);
+  border: 1px solid var(--apple-separator-light);
+  border-radius: 16px;
+  box-shadow: var(--apple-shadow-float);
+  text-align: center;
+}
+
+body .wrap:not(.wrap--sidebar-offset) .btn {
+  margin-top: 8px;
+}
+
+body .wrap:not(.wrap--sidebar-offset) .code {
+  font-size: clamp(1.75rem, 5vw, 2.35rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+@media (max-width: 640px) {
+  .panel,
+  .card:not(main.card) {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .table-wrap th,
+  .table-wrap td,
+  .panel th,
+  .panel td {
+    padding: 8px 10px;
+    font-size: 0.78rem;
+  }
+}

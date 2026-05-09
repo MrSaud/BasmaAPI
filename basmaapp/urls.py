@@ -5,6 +5,7 @@ urlpatterns = [
     path("basma", views.basma, name="index"),
     path("list_users", views.list_users, name="list_users"),
     path("employee/verify-uuid/", views.VerifyEmployeeUUIDView.as_view()),
+    path("superadmin/app-global-settings/", views.SuperAdminAppGlobalSettingsView.as_view()),
     path("employee/check_license/", views.CheckEmployeeLicenseView.as_view()),
     path("employee/update-uuid/", views.UpdateEmployeeUUIDView.as_view()),
     path("employee/start_activation/", views.start_employee_activation, name="start_employee_activation"),
