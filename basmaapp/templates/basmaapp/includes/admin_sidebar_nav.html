@@ -38,6 +38,9 @@
         {% if can_manage_user_accounts %}
           <a class="sidebar-link" href="{% url 'super_admin_user_accounts' %}"><span class="sidebar-link-text">User Accounts</span></a>
         {% endif %}
+        {% if can_manage_app_global_settings %}
+          <a class="sidebar-link" href="{% url 'app_global_settings' %}"><span class="sidebar-link-text">{% tr "App global settings" %}</span></a>
+        {% endif %}
       </div>
     </div>
     <div class="sidebar-section">

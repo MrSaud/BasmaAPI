@@ -35,6 +35,7 @@ urlpatterns = [
     path("admin-home/activation-requests/", basma_views.activation_requests_view, name="activation_requests"),
     path("admin-home/data-import/", basma_views.data_import_view, name="data_import"),
     path("admin-home/user-accounts/", basma_views.super_admin_user_accounts_view, name="super_admin_user_accounts"),
+    path("admin-home/app-global-settings/", basma_views.app_global_settings_view, name="app_global_settings"),
     path("admin-home/audit-insights/", basma_views.audit_insights_view, name="audit_insights"),
     path("admin-home/audit-insights/<int:audit_id>/diff/", basma_views.audit_diff_view, name="audit_diff"),
     path("admin-home/audit-insights/export.csv", basma_views.audit_export_csv_view, name="audit_export_csv"),

@@ -2137,6 +2137,50 @@ def super_admin_user_accounts_view(request):
 
 
 @staff_member_required(login_url="/admin-login/")
+def app_global_settings_view(request):
+    entity = _get_staff_entity_or_403(request)
+    if not request.user.is_superuser:
+        raise PermissionDenied("Only super admin can manage app global settings.")
+    ui_lang = _get_ui_language(request)
+    entity_logo_src = _get_entity_logo_src(entity)
+    solo = AppGlobalSettings.get_solo()
+
+    if request.method == "POST":
+        new_val = request.POST.get("store_review_mode") == "on"
+        if new_val != solo.store_review_mode:
+            old_val = solo.store_review_mode
+            solo.store_review_mode = new_val
+            solo.save()
+            _safe_audit_log(
+                request,
+                entity,
+                page="app_global_settings",
+                action="UPDATE_APP_GLOBAL_SETTINGS",
+                model_name="appglobalsettings",
+                object_id="1",
+                details=json.dumps(
+                    {"store_review_mode": {"old": old_val, "new": new_val}},
+                    ensure_ascii=True,
+                ),
+            )
+        return redirect(reverse("app_global_settings"))
+
+    return render(
+        request,
+        "basmaapp/app_global_settings.html",
+        {
+            "entity": entity,
+            "store_review_mode": solo.store_review_mode,
+            "updated_at": solo.updated_at,
+            "footer_entity_name": entity.name,
+            "footer_user_name": _get_footer_user_name(request),
+            "ui_lang": ui_lang,
+            "header_logo_src": entity_logo_src,
+        },
+    )
+
+
+@staff_member_required(login_url="/admin-login/")
 def reports_home_view(request):
     entity = _get_staff_entity_or_403(request)
     ui_lang = _get_ui_language(request)
@@ -3051,6 +3095,7 @@ def build_admin_sidebar_context(request, entity):
             or _check_model_privilege(request, entity, "location", "add")
         ),
         "can_manage_user_accounts": request.user.is_superuser,
+        "can_manage_app_global_settings": request.user.is_superuser,
         "realtime_alert_count": len(realtime_alerts),
         "pending_activation_requests_count": _pending_activation_requests_count(entity),
     }

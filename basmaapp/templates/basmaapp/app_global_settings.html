@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == "ar" %}ar{% elif ui_lang == "es" %}es{% else %}en{% endif %}" dir="{% if ui_lang == "ar" %}rtl{% else %}ltr{% endif %}">
+{% load localize static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWAP-ATTENDANCE</title>
+  <style>
+    :root {
+      --bg:#eef2f6;
+      --panel:#fff;
+      --text:#1e293b;
+      --muted:#64748b;
+      --border:#cbd5e1;
+      --brand: {{ admin_theme_color|default:"#0284c7" }};
+      --brand-dark: {{ admin_theme_color_dark|default:"#0369a1" }};
+      --warn-bg:#fffbeb;
+      --warn-border:#fcd34d;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:linear-gradient(120deg,#eef2f6,#e0f2fe 50%,#f1f5f9); color:var(--text); }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 30px; }
+    .top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; margin-bottom:12px; }
+    .title-wrap { display:flex; gap:10px; }
+    .entity-logo { width:52px; height:52px; object-fit:contain; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    .btn { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; padding:8px 14px; border-radius:10px; border:1px solid var(--border); background:#fff; color:var(--text); font-weight:600; font-size:.82rem; cursor:pointer; }
+    .btn.primary { background:var(--brand); border-color:var(--brand); color:#fff; }
+    .panel { border:1px solid var(--border); border-radius:12px; background:var(--panel); padding:16px; margin-bottom:12px; }
+    .warn { background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:12px; padding:12px 14px; margin-bottom:12px; font-size:.86rem; line-height:1.45; color:#92400e; }
+    .footer { margin-top: 12px; text-align:center; color:var(--muted); font-size:.84rem; }
+    .toggle-row { display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+    .toggle-row input[type="checkbox"] { width:18px; height:18px; margin-top:2px; flex-shrink:0; }
+    .meta { font-size:.8rem; color:var(--muted); margin-top:8px; }
+    .menu-dd { position:relative; }
+    .menu-dd > summary { list-style:none; }
+    .menu-dd > summary::-webkit-details-marker { display:none; }
+  </style>
+  {% include "basmaapp/includes/admin_shell_assets.html" %}
+</head>
+<body>
+  <div class="wrap wrap--sidebar-offset">
+    <div class="top">
+      <div class="title-wrap">
+        {% if header_logo_src %}
+          <span style="display:inline-flex; padding:3px; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); box-shadow:0 10px 24px rgba(2,132,199,.22);">
+            <img src="{{ header_logo_src }}" alt="Entity logo" class="entity-logo" style="width:54px; height:54px; border-radius:12px; border:2px solid #fff; object-fit:cover; background:#fff;">
+          </span>
+        {% else %}
+          <span style="display:inline-flex; width:60px; height:60px; align-items:center; justify-content:center; border-radius:16px; background:linear-gradient(135deg, var(--brand), var(--brand-dark, var(--brand))); color:#fff; font-size:1rem; font-weight:800; letter-spacing:.06em; box-shadow:0 10px 24px rgba(2,132,199,.28);">{{ admin_entity_initials|default:"AT" }}</span>
+        {% endif %}
+        <div>
+          <h1 style="margin:0;">{% tr "App global settings" %}</h1>
+          <p style="margin:6px 0 0; color:#64748b;">{% tr "Entity" %}: {{ admin_entity_display_name|default:footer_entity_name }}{% if admin_entity_code %} ({{ admin_entity_code }}){% endif %} | {% tr "User" %}: {{ footer_user_name }}</p>
+        </div>
+      </div>
+      <div class="actions" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button class="btn" onclick="history.length > 1 ? history.back() : window.location='{% url 'admin_home' %}';" type="button">{% tr "Back" %}</button>
+        <details class="menu-dd">
+          <summary class="btn">{% tr "Language" %}</summary>
+          <div class="lang-dropdown-menu">
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=ar&next={{ request.get_full_path|urlencode }}">🇰🇼 Arabic</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=en&next={{ request.get_full_path|urlencode }}">🇺🇸 English</a>
+            <a class="btn" href="{% url 'set_ui_language' %}?lang=es&next={{ request.get_full_path|urlencode }}">🇪🇸 Espanol</a>
+          </div>
+        </details>
+        {% include "basmaapp/includes/admin_sidebar_nav.html" %}
+      </div>
+    </div>
+
+    <div class="warn">
+      {% tr "Store review mode sends all verify-uuid requests to the active Employee linked to Django User id 1. Use only for App Store review or staging; disable for production." %}
+    </div>
+
+    <form method="post" class="panel">
+      {% csrf_token %}
+      <div class="toggle-row">
+        <input id="store_review_mode" name="store_review_mode" type="checkbox" {% if store_review_mode %}checked{% endif %}>
+        <label for="store_review_mode" style="cursor:pointer; font-weight:600;">
+          {% tr "Store review mode" %}
+        </label>
+      </div>
+      <p style="margin:10px 0 0; font-size:.86rem; color:var(--muted); line-height:1.45;">
+        {% tr "When enabled, POST /api/employee/verify-uuid/ ignores the submitted UUID and returns user_id for the demo employee (User id 1), if that profile exists and the entity license is valid." %}
+      </p>
+      {% if updated_at %}
+        <p class="meta">{% tr "Last updated" %}: {{ updated_at|date:"Y-m-d H:i:s" }}</p>
+      {% endif %}
+      <div style="margin-top:16px;">
+        <button class="btn primary" type="submit">{% tr "Save" %}</button>
+      </div>
+    </form>
+
+    <div class="footer">{{ footer_entity_name }} · {{ footer_user_name }}</div>
+  </div>
+</body>
+</html>
