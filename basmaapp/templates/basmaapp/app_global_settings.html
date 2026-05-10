@@ -30,6 +30,9 @@
     .footer { margin-top: 12px; text-align:center; color:var(--muted); font-size:.84rem; }
     .toggle-row { display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; }
     .toggle-row input[type="checkbox"] { width:18px; height:18px; margin-top:2px; flex-shrink:0; }
+    .field-label { display:block; font-weight:600; margin-bottom:6px; }
+    .field-input { width:100%; max-width:280px; border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:.9rem; }
+    .form-error { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:.86rem; }
     .meta { font-size:.8rem; color:var(--muted); margin-top:8px; }
     .menu-dd { position:relative; }
     .menu-dd > summary { list-style:none; }
@@ -68,19 +71,28 @@
     </div>
 
     <div class="warn">
-      {% tr "Store review mode sends all verify-uuid requests to the active Employee linked to Django User id 1. Use only for App Store review or staging; disable for production." %}
+      {% tr "Store review mode sends all verify-uuid requests to the active Employee linked to the Django User id you set below. Use only for App Store review or staging; disable for production." %}
     </div>
 
     <form method="post" class="panel">
       {% csrf_token %}
+      {% if form_error %}
+        <div class="form-error">{{ form_error }}</div>
+      {% endif %}
       <div class="toggle-row">
         <input id="store_review_mode" name="store_review_mode" type="checkbox" {% if store_review_mode %}checked{% endif %}>
         <label for="store_review_mode" style="cursor:pointer; font-weight:600;">
           {% tr "Store review mode" %}
         </label>
       </div>
+      <label class="field-label" for="store_review_user_id">{% tr "Django User id (store review)" %}</label>
+      <input class="field-input" id="store_review_user_id" name="store_review_user_id" type="number" min="1" step="1" required
+        value="{{ store_review_user_id }}">
+      <p style="margin:8px 0 0; font-size:.86rem; color:var(--muted); line-height:1.45;">
+        {% tr "Must match an existing Django auth user. verify-uuid uses that user’s active Employee profile when review mode is on." %}
+      </p>
       <p style="margin:10px 0 0; font-size:.86rem; color:var(--muted); line-height:1.45;">
-        {% tr "When enabled, POST /api/employee/verify-uuid/ ignores the submitted UUID and returns user_id for the demo employee (User id 1), if that profile exists and the entity license is valid." %}
+        {% tr "When enabled, POST /api/employee/verify-uuid/ ignores the submitted UUID and returns user_id for that employee if the entity license is valid." %}
       </p>
       {% if updated_at %}
         <p class="meta">{% tr "Last updated" %}: {{ updated_at|date:"Y-m-d H:i:s" }}</p>

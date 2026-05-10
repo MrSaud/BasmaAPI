@@ -377,7 +377,11 @@ class AppGlobalSettings(models.Model):
 
     store_review_mode = models.BooleanField(
         default=False,
-        help_text="When enabled, verify-uuid skips UUID matching and returns the Employee linked to Django User id=1.",
+        help_text="When enabled, verify-uuid skips UUID matching and uses the Employee linked to store_review_user_id.",
+    )
+    store_review_user_id = models.PositiveIntegerField(
+        default=1,
+        help_text="Django User.pk whose Employee profile is used when store review mode is on.",
     )
     updated_at = models.DateTimeField(auto_now=True)
 

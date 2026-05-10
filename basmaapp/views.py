@@ -26,6 +26,7 @@ from .serializers import UpdateEmployeeUUIDSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import BasePermission
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.db.models import Count, Q, Max, Min, F, Exists, OuterRef, Case, When, Value, BooleanField
@@ -52,6 +53,14 @@ from .face_detection import run_face_compare, run_liveness_check
 
 
 MANAGER_QR_LIVE_PREFIX = "mgrlive"
+
+
+class IsSuperUser(BasePermission):
+    """DRF: Django superuser only (`is_superuser=True`), not staff-only."""
+
+    def has_permission(self, request, view):
+        u = request.user
+        return bool(u and u.is_authenticated and getattr(u, "is_superuser", False))
 
 
 def check_liveness_with_api(photo_base64):
@@ -641,6 +650,12 @@ def _is_full_admin_for_model(user, entity, model_name):
 
 
 def _check_model_privilege(request, entity, model_name, action):
+    # Singleton global settings: never create via generic model UI; only superuser may read/edit.
+    if model_name == "appglobalsettings" and action == "add":
+        return False
+    if model_name == "appglobalsettings":
+        return request.user.is_superuser
+
     if request.user.is_superuser:
         return True
 
@@ -2145,33 +2160,55 @@ def app_global_settings_view(request):
     entity_logo_src = _get_entity_logo_src(entity)
     solo = AppGlobalSettings.get_solo()
 
+    form_error = ""
+    display_mode = solo.store_review_mode
+    display_uid = solo.store_review_user_id
     if request.method == "POST":
-        new_val = request.POST.get("store_review_mode") == "on"
-        if new_val != solo.store_review_mode:
-            old_val = solo.store_review_mode
-            solo.store_review_mode = new_val
-            solo.save()
-            _safe_audit_log(
-                request,
-                entity,
-                page="app_global_settings",
-                action="UPDATE_APP_GLOBAL_SETTINGS",
-                model_name="appglobalsettings",
-                object_id="1",
-                details=json.dumps(
-                    {"store_review_mode": {"old": old_val, "new": new_val}},
-                    ensure_ascii=True,
-                ),
-            )
-        return redirect(reverse("app_global_settings"))
+        new_mode = request.POST.get("store_review_mode") == "on"
+        raw_uid = (request.POST.get("store_review_user_id") or "").strip()
+        display_mode = new_mode
+        try:
+            new_uid = int(raw_uid)
+        except (TypeError, ValueError):
+            form_error = "Enter a valid positive integer for Django User id."
+            display_uid = raw_uid if raw_uid else solo.store_review_user_id
+        else:
+            display_uid = new_uid
+            if new_uid < 1:
+                form_error = "Django User id must be at least 1."
+            elif not User.objects.filter(pk=new_uid).exists():
+                form_error = "No Django user exists with this id."
+
+        if not form_error:
+            changes = {}
+            if new_mode != solo.store_review_mode:
+                changes["store_review_mode"] = {"old": solo.store_review_mode, "new": new_mode}
+            if new_uid != solo.store_review_user_id:
+                changes["store_review_user_id"] = {"old": solo.store_review_user_id, "new": new_uid}
+            if changes:
+                solo.store_review_mode = new_mode
+                solo.store_review_user_id = new_uid
+                solo.save()
+                _safe_audit_log(
+                    request,
+                    entity,
+                    page="app_global_settings",
+                    action="UPDATE_APP_GLOBAL_SETTINGS",
+                    model_name="appglobalsettings",
+                    object_id="1",
+                    details=json.dumps(changes, ensure_ascii=True),
+                )
+            return redirect(reverse("app_global_settings"))
 
     return render(
         request,
         "basmaapp/app_global_settings.html",
         {
             "entity": entity,
-            "store_review_mode": solo.store_review_mode,
+            "store_review_mode": display_mode,
+            "store_review_user_id": display_uid,
             "updated_at": solo.updated_at,
+            "form_error": form_error,
             "footer_entity_name": entity.name,
             "footer_user_name": _get_footer_user_name(request),
             "ui_lang": ui_lang,
@@ -3484,6 +3521,12 @@ def _scope_queryset_by_entity(queryset, entity, current_user=None):
             return queryset.none()
         return queryset.filter(entity=entity, user=current_user)
 
+    # Deployment-wide singleton; not tied to staff entity (superuser-only in privileges).
+    if model._meta.model_name == "appglobalsettings":
+        if current_user is not None and getattr(current_user, "is_superuser", False):
+            return queryset
+        return queryset.none()
+
     if "entity" in field_names:
         return queryset.filter(entity=entity)
     if model._meta.model_name == "entity":
@@ -3744,6 +3787,8 @@ def model_records_view(request, model_name):
     entity = _get_staff_entity_or_403(request)
     ui_lang = _get_ui_language(request)
     entity_logo_src = _get_entity_logo_src(entity)
+    if model._meta.model_name == "appglobalsettings":
+        AppGlobalSettings.get_solo()
     _require_model_privilege_or_403(request, entity, model._meta.model_name, "read")
     can_add = _check_model_privilege(request, entity, model._meta.model_name, "add")
     can_edit = _check_model_privilege(request, entity, model._meta.model_name, "edit")
@@ -4475,6 +4520,8 @@ def model_edit_view(request, model_name, pk):
     edit_prefix = {"en": "Edit", "ar": "تعديل", "es": "Editar"}.get(ui_lang, "Edit")
     update_label = {"en": "Update", "ar": "تحديث", "es": "Actualizar"}.get(ui_lang, "Update")
     _require_model_privilege_or_403(request, entity, model._meta.model_name, "edit")
+    if model._meta.model_name == "appglobalsettings" and not request.user.is_superuser:
+        raise PermissionDenied("Only Django superusers can change app global settings.")
     if model._meta.model_name in {"attendancetransaction", "audit"} and not request.user.is_superuser:
         raise PermissionDenied("Only super admin can edit this model.")
     instance = get_object_or_404(
@@ -4719,16 +4766,21 @@ class VerifyEmployeeUUIDView(APIView):
         try:
             body = request.data or {}
 
-            if AppGlobalSettings.get_solo().store_review_mode:
+            solo_gs = AppGlobalSettings.get_solo()
+            if solo_gs.store_review_mode:
+                review_uid = solo_gs.store_review_user_id
                 employee = (
                     Employee.objects.select_related("user", "entity")
-                    .filter(user_id=1, is_active=True)
+                    .filter(user_id=review_uid, is_active=True)
                     .first()
                 )
                 if employee is None:
                     return Response(
                         {
-                            "error": "Store review mode is enabled but there is no active Employee for Django User id=1.",
+                            "error": (
+                                f"Store review mode is enabled but there is no active Employee for "
+                                f"Django User id={review_uid}."
+                            ),
                         },
                         status=status.HTTP_503_SERVICE_UNAVAILABLE,
                     )
@@ -4744,6 +4796,7 @@ class VerifyEmployeeUUIDView(APIView):
                         "user_id": employee.id,
                         "employee_uuid": str(employee.employee_uuid),
                         "store_review_mode": True,
+                        "store_review_user_id": review_uid,
                     },
                     status=status.HTTP_200_OK,
                 )
@@ -4796,39 +4849,60 @@ class SuperAdminAppGlobalSettingsView(APIView):
     GET/PATCH deployment-wide app flags. Django superuser only (session or token).
     """
 
+    permission_classes = [IsSuperUser]
+
     def get(self, request):
-        if not request.user.is_authenticated or not request.user.is_superuser:
-            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         solo = AppGlobalSettings.get_solo()
         return Response(
             {
                 "store_review_mode": solo.store_review_mode,
+                "store_review_user_id": solo.store_review_user_id,
                 "updated_at": solo.updated_at.isoformat() if solo.updated_at else None,
             },
             status=status.HTTP_200_OK,
         )
 
     def patch(self, request):
-        if not request.user.is_authenticated or not request.user.is_superuser:
-            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         body = request.data or {}
-        if "store_review_mode" not in body:
-            return Response(
-                {"error": "store_review_mode is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        val = body.get("store_review_mode")
-        if not isinstance(val, bool):
-            return Response(
-                {"error": "store_review_mode must be a boolean"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
         solo = AppGlobalSettings.get_solo()
-        solo.store_review_mode = val
+        if "store_review_mode" in body:
+            val = body.get("store_review_mode")
+            if not isinstance(val, bool):
+                return Response(
+                    {"error": "store_review_mode must be a boolean"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            solo.store_review_mode = val
+        if "store_review_user_id" in body:
+            raw = body.get("store_review_user_id")
+            try:
+                uid = int(raw)
+            except (TypeError, ValueError):
+                return Response(
+                    {"error": "store_review_user_id must be a positive integer"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if uid < 1:
+                return Response(
+                    {"error": "store_review_user_id must be at least 1"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not User.objects.filter(pk=uid).exists():
+                return Response(
+                    {"error": "No Django user exists with this id."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            solo.store_review_user_id = uid
+        if "store_review_mode" not in body and "store_review_user_id" not in body:
+            return Response(
+                {"error": "Provide store_review_mode and/or store_review_user_id"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         solo.save()
         return Response(
             {
                 "store_review_mode": solo.store_review_mode,
+                "store_review_user_id": solo.store_review_user_id,
                 "updated_at": solo.updated_at.isoformat() if solo.updated_at else None,
             },
             status=status.HTTP_200_OK,
