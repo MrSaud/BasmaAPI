@@ -5,7 +5,13 @@ Base URL
 
 Common Error Response
 - {"error":"<message>"}
-- Typical status codes: 400, 403 (license invalid/expired), 404
+- Typical status codes: 400, 403 (license invalid/expired), 404, 503 (store review misconfiguration)
+
+App Global Settings (deployment-wide)
+- Singleton row (AppGlobalSettings): toggles that affect mobile/API behavior.
+- store_review_mode (bool): when true, verify-uuid skips UUID matching.
+- store_review_user_id (int): Django User.pk whose Employee profile is returned in store review mode (default 1).
+- Manage via superadmin API (below) or admin UI (Django superuser only).
 
 1) Health Check
 - Endpoint: GET /api/basma
@@ -25,8 +31,48 @@ Common Error Response
 - Endpoint: POST /api/employee/verify-uuid/
 - Request:
   {"employee_uuid":"550e8400-e29b-41d4-a716-446655440000"}
-- Response 200:
+- Response 200 (normal mode):
   {"message":"UUIDs match","user_id":123}
+- Response 200 (store_review_mode enabled):
+  {
+    "message":"UUIDs match",
+    "user_id":123,
+    "employee_uuid":"550e8400-e29b-41d4-a716-446655440000",
+    "store_review_mode":true,
+    "store_review_user_id":1
+  }
+- Note:
+  When store_review_mode is on, employee_uuid in the request is ignored. The server
+  returns the active Employee linked to store_review_user_id (Django User.pk).
+  user_id in the response is Employee.id (not Django User.id).
+- Response 503 (store review enabled but no active employee for store_review_user_id):
+  {"error":"Store review mode is enabled but there is no active Employee for Django User id=<id>."}
+
+3.1) Superadmin App Global Settings
+- Endpoint: GET /api/superadmin/app-global-settings/
+- Auth: Django superuser only (session or token). Staff-only users receive 403.
+- Request: none
+- Response 200:
+  {
+    "store_review_mode":false,
+    "store_review_user_id":1,
+    "updated_at":"2026-05-10T04:55:33+00:00"
+  }
+- Endpoint: PATCH /api/superadmin/app-global-settings/
+- Auth: Django superuser only
+- Request (provide at least one field):
+  {"store_review_mode":true,"store_review_user_id":1}
+- Response 200:
+  {
+    "store_review_mode":true,
+    "store_review_user_id":1,
+    "updated_at":"2026-05-10T04:55:33+00:00"
+  }
+- Response 400 examples:
+  {"error":"Provide store_review_mode and/or store_review_user_id"}
+  {"error":"store_review_mode must be a boolean"}
+  {"error":"store_review_user_id must be a positive integer"}
+  {"error":"No Django user exists with this id."}
 
 4) Update Employee UUID
 - Endpoint: POST /api/employee/update-uuid/

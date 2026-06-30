@@ -41,7 +41,9 @@ Paths below are relative to **`/api/`**.
 |--------|------|---------------------|------------------|
 | GET | `basma` | — | Health check |
 | GET | `list_users` | — | **Staff session** required; lists users for the selected admin entity |
-| POST | `employee/verify-uuid/` | `employee_uuid` | DRF (`request.data`). Response uses `user_id`: currently **`Employee.id`** (not Django `User.id`) — verify client naming |
+| POST | `employee/verify-uuid/` | `employee_uuid` | DRF (`request.data`). Response `user_id` is **`Employee.id`** (not Django `User.id`). When **`store_review_mode`** is on, UUID matching is skipped — see [Store review mode](#store-review-mode) |
+| GET | `superadmin/app-global-settings/` | — | **Django superuser** only. Returns deployment-wide app flags |
+| PATCH | `superadmin/app-global-settings/` | at least one of `store_review_mode`, `store_review_user_id` | **Django superuser** only. Updates `AppGlobalSettings` singleton |
 | POST | `employee/check_license/` | `employee_uuid` | License / entity info |
 | POST | `employee/update-uuid/` | `employee_no`, `employee_uuid` | `device_uuid`, `by_staff_id` optional (DRF serializer) |
 | POST | `employee/start_activation/` | `identifier` | e.g. `ENTITYCODE-IDENTIFIER`; `device_uuid` used for `option_2` flows |
@@ -73,6 +75,44 @@ Paths below are relative to **`/api/`**.
 
 ---
 
+## App global settings
+
+Deployment-wide toggles live in a singleton **`AppGlobalSettings`** row (managed in Django admin or via the superadmin API).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `store_review_mode` | boolean | When `true`, `verify-uuid` skips UUID matching (for App Store review builds) |
+| `store_review_user_id` | positive int | Django **`User.pk`** whose **`Employee`** profile is returned when store review mode is on (default `1`) |
+| `updated_at` | ISO datetime | Last change timestamp (read-only in API responses) |
+
+### Superadmin API
+
+**`GET /api/superadmin/app-global-settings/`** — returns current values.
+
+**`PATCH /api/superadmin/app-global-settings/`** — update one or both fields:
+
+```json
+{
+  "store_review_mode": true,
+  "store_review_user_id": 1
+}
+```
+
+- Requires **`is_superuser=True`** (staff-only accounts get **403**).
+- `store_review_user_id` must reference an existing Django user.
+- At least one of `store_review_mode` or `store_review_user_id` must be present in the body.
+
+### Store review mode
+
+When **`store_review_mode`** is enabled:
+
+1. **`POST /api/employee/verify-uuid/`** ignores the submitted `employee_uuid`.
+2. The server looks up the active **`Employee`** where **`user_id`** equals **`store_review_user_id`**.
+3. On success, the response includes `store_review_mode: true`, `store_review_user_id`, and the review employee’s `employee_uuid`.
+4. If no active employee exists for that user → **503** with an explanatory `error` message.
+
+---
+
 ## Face liveness and face compare
 
 There is **no standalone** “liveness only” or “compare only” public route. Server-side checks run inside:
@@ -89,8 +129,9 @@ when entity / QR policy requires them, using `photo_base64` and the employee’s
 Typical JSON shape: `{"error": "<message>"}`.
 
 - **400** — Missing/invalid fields, invalid JSON, validation errors
-- **403** — License expired, identity/device checks, geofence radius, cross-entity actions, permission (e.g. not manager)
+- **403** — License expired, identity/device checks, geofence radius, cross-entity actions, permission (e.g. not manager, not superuser)
 - **404** — Employee, entity, token, or message not found
+- **503** — Store review mode enabled but no active employee for the configured `store_review_user_id`
 - **409** — Duplicate / already decided / token already used (context-specific)
 - **410** — QR token expired
 
@@ -98,7 +139,7 @@ Typical JSON shape: `{"error": "<message>"}`.
 
 ## Frontend gotchas
 
-1. **`verify-uuid`** returns `"user_id"` set to **`Employee.id`** in the current backend — do not assume it is Django **`User.id`** unless you align with this behavior.
+1. **`verify-uuid`** returns `"user_id"` set to **`Employee.id`** in the current backend — do not assume it is Django **`User.id`**. In **store review mode**, the request UUID is ignored; the employee comes from **`store_review_user_id`**.
 2. **`load_employees_entity`** returns `"employee_id"` as **`Employee.user_id`** per record; other endpoints may expect **`Employee.id`** or **`user_id`** in different shapes — always check the response field definitions above.
 3. **`search_employees`** returns both **`employee_id`** (**`Employee.id`**) and **`user_id`** per row for disambiguation.
 
@@ -118,4 +159,4 @@ python manage.py runserver
 
 ## See also
 
-- `API_BRIEF.txt` — older partial API notes (may drift from code; this README is aligned with `basmaapp/urls.py` and `basmaapp/views.py`).
+- `API_BRIEF.txt` — concise endpoint reference (partial coverage; both docs are aligned for app global settings and store review mode).
